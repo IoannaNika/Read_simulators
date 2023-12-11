@@ -22,7 +22,7 @@ def main():
     # read sequences.fasta file
     fasta_sequences = SeqIO.parse(open(seq_path),'fasta')
     # create output directory in data directory
-    parent_out_dir = args.dir + "/split_fasta"
+    parent_out_dir = args.dir
     if not os.path.exists(parent_out_dir):
         os.mkdir(parent_out_dir)
 
