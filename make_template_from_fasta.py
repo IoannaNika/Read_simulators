@@ -39,7 +39,7 @@ def create_template(seq, id):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Split multi-fasta files into single fasta files")
+    parser = argparse.ArgumentParser(description="Creates amplicon fragments")
     parser.add_argument('--dir', dest = 'dir', required=True, type=str, help="path to data directory")
     args = parser.parse_args()
 
