@@ -10,10 +10,10 @@ def create_template(seq, id):
     template = "data/nCoV-2019.bed"
     template_df = pd.read_csv(template, sep='\t', header=None)
     template_df.columns = ["chr", "start", "end", "name_1", "name_2", "strand"]
-
     final_template = ""
     # read template file two lines at a time (positive & negative strand info)
     for i in range(0, len(template_df), 2):
+        cnt = 0
         # get positive strand info
         pos_strand = template_df.iloc[i]
         # get negative strand info
@@ -30,8 +30,10 @@ def create_template(seq, id):
         
         amplicon = seq[seq_start:seq_end]
 
-        final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + "\n"
-        final_template += str(amplicon) + "\n"
+        while cnt < 10:
+            final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+            final_template += str(amplicon) + "\n"
+            cnt += 1
     
     return final_template
 
@@ -45,8 +47,10 @@ def main():
     data_dir = args.dir
 
     # get all directories in data directory
-    dirs = [[x[0] for x in os.walk(data_dir)][1]]
-    print(dirs)
+    dirs = [x[0] for x in os.walk(data_dir)]
+    
+    if data_dir in dirs:
+        dirs.remove(data_dir)
     
     # for each directory, get all fasta files
     for directory in dirs:
@@ -69,6 +73,7 @@ def main():
 
             with open(template_file, "w") as out_file:
                 out_file.write(template)
+
 
     
 if __name__ == "__main__":
