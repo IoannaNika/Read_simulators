@@ -62,7 +62,7 @@ def sample_negative_pair(read_anchor, maf_dict_2, reads2, gr_key):
     intersection = maf_dict_2[gr_key].intersection(set(reads2.keys()))
     if len(intersection) == 0:
         print("no reads in the intersection")
-        raise Exception
+        raise KeyError
 
     read_negative_sid = random.sample(list(intersection),1)
 
@@ -95,7 +95,7 @@ def sample_positive_pair(maf_dict_1, reads1, gr_key):
     intersection = maf_dict_1[gr_key].intersection(set(reads1.keys()))
     if len(intersection) < 2:
         print("not enough reads in the intersection")
-        raise Exception
+        raise KeyError
   
     reads_positive = random.sample(list(intersection), 2)
     
@@ -128,7 +128,6 @@ def write_to_fasta(genome_id, read_sid, read, outdir):
     return
 
 def sample(genomic_region, sample1, sample2, outdir):
-    print(sample1, sample2)
     lineage1 = sample1[1].split("/")[-1]
     lineage2 = sample2[1].split("/")[-1]
     maf_file_1 = os.path.join(sample1[1], sample1[0] + ".maf")
@@ -258,6 +257,7 @@ def main():
             num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir)
         except KeyError: 
             print("genomic region not found in one of the genomes selected: ", genomic_region, " continuing to next iteration")
+            num_samples = 0
 
         count += num_samples
         print("number of samples: ", count)
