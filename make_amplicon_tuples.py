@@ -39,7 +39,12 @@ def parse_fastq(fastq_file):
 
     l = 0
     while(l!= len(lines)):
-        read_name = "/".join(lines[l].split(" ")[0].split("/")[-1])[1:]
+        # @S/1/ccs -> lines[l].split(" ")[0]
+        # S/1/ccs -> lines[l].split(" ")[0][1:]
+        # [S, 1, css] lines[l].split(" ")[0][1:].split("/")
+        # [S, 1] -> lines[l].split(" ")[0][1:].split("/")[:-1]
+        # S/1 -> "/".join(lines[l].split(" ")[0][1:].split("/")[:-1])
+        read_name = "/".join(lines[l].split(" ")[0][1:].split("/")[:-1])
         l+=1
         read = lines[l]
         l+=2
@@ -51,21 +56,32 @@ def parse_fastq(fastq_file):
 
 def sample_negative_pair(read_anchor, maf_dict_2, reads2, gr_key):
     # get negative pair of reads from the same genomic region
-    read_negative_sid = random.sample(maf_dict_2[gr_key],1)
-    reads_negative = reads2[reads_negative]
-    ed_neg =  editdistance.eval(read_anchor, reads_negative)
-    return (read_negative_sid, reads_negative), ed_neg
+    read_negative_sid = random.sample(list(maf_dict_2[gr_key]),1)
 
-def check_if_in_tsv(read_1_sid, read_2_sid, outdir):
+    while read_negative_sid[0] not in reads2.keys():
+        print("Negative read not in the fastq file")
+        print(read_negative_sid[0], reads2.keys())
+        raise Exception
+
+        read_negative_sid = random.sample(list(maf_dict_2[gr_key]),1)
+
+    reads_negative = reads2[read_negative_sid[0]]
+    ed_neg =  editdistance.eval(read_anchor, reads_negative)
+    return (read_negative_sid[0], reads_negative), ed_neg
+
+def check_if_in_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, outdir):
     # load tsv file 
     tsv_file = os.path.join(outdir, "samples.tsv")
 
     out_df = pd.read_csv(tsv_file, sep="\t", header=0)
 
-    if read_1_sid in out_df["read_1"].values and read_2_sid in out_df["read_2"].values:
+    complete_read_id_1 = gisaid_id_1 + "_" + read_1_sid.replace("/", "")
+    complete_read_id_2 = gisaid_id_2 + "_" + read_2_sid.replace("/", "")
+
+    if complete_read_id_1 in out_df["read_1"].values and complete_read_id_2 in out_df["read_2"].values:
         print("positive pair is already in tsv file")
         return True
-    if read_1_sid in out_df["read_2"].values and read_2_sid in out_df["read_1"].values:
+    if complete_read_id_1 in out_df["read_2"].values and complete_read_id_2 in out_df["read_1"].values:
         print("positive pair is already in tsv file")
         return True
     
@@ -73,7 +89,14 @@ def check_if_in_tsv(read_1_sid, read_2_sid, outdir):
 
 def sample_positive_pair(maf_dict_1, reads1, gr_key):
     # sample positive pair of reads from the same genomic region
-    reads_positive = random.sample(maf_dict_1[gr_key], 2)
+    reads_positive = random.sample(list(maf_dict_1[gr_key]), 2)
+  
+    while reads_positive[0] not in reads1.keys() or reads_positive[1] not in reads1.keys():
+        print("At least one of the positive reads not in the fastq file")
+        print(reads_positive[0], reads_positive[1], reads1.keys())
+        raise Exception
+        reads_positive = random.sample(list(maf_dict_1[gr_key]), 2)
+    
     read_anchor = reads1[reads_positive[0]]
     read_anchor_sid = reads_positive[0]
     read_positive = reads1[reads_positive[1]]
@@ -81,20 +104,21 @@ def sample_positive_pair(maf_dict_1, reads1, gr_key):
     ed_pos = editdistance.eval(read_anchor, read_positive)
     return (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos
 
-def write_to_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, label, genomic_region, read_length, lineage, outdir):
-    complete_read_id_1 = gisaid_id_1 + "_" + read_1_sid 
-    complete_read_id_2 = gisaid_id_2 + "_" + read_2_sid
+
+def write_to_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, label, genomic_region, read_length1, read_length2, lineage1, lineage2, outdir):
+    complete_read_id_1 = gisaid_id_1 + "_" + read_1_sid.replace("/", "")
+    complete_read_id_2 = gisaid_id_2 + "_" + read_2_sid.replace("/", "")
     # Header: read_1 read_2 label genomic_region read_length lineage
     tsv_file = os.path.join(outdir, "samples.tsv")
     # load tsv file
-    writer = csv.writer(tsv_file, delimiter="\t")
-    writer.writerow([complete_read_id_1, complete_read_id_2, label, genomic_region, read_length, lineage])
-    writer.close()
+    with open(tsv_file, 'a') as tsvfile:
+        writer = csv.writer(tsvfile, delimiter="\t")
+        writer.writerow([complete_read_id_1, complete_read_id_2, label, genomic_region, read_length1, read_length2, lineage1, lineage2])
     return 
 
 
 def write_to_fasta(genome_id, read_sid, read, outdir):
-    complete_read_id = genome_id + "_" + read_sid
+    complete_read_id = genome_id + "_" + read_sid.replace("/", "")
     read_file = os.path.join(outdir, "reads", complete_read_id + ".fasta")
     with open(read_file, "w") as f:
         f.write(">" + complete_read_id + "\n")
@@ -102,6 +126,7 @@ def write_to_fasta(genome_id, read_sid, read, outdir):
     return
 
 def sample(genomic_region, sample1, sample2, outdir):
+    print(sample1, sample2)
     lineage1 = sample1[1].split("/")[-1]
     lineage2 = sample2[1].split("/")[-1]
     maf_file_1 = os.path.join(sample1[1], sample1[0] + ".maf")
@@ -119,21 +144,22 @@ def sample(genomic_region, sample1, sample2, outdir):
     reads_2 = parse_fastq(fastq_file_2)
 
     # get positive pair
-    (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed = sample_positive_pair(maf_dict_1, reads_1, gr_key)
-    
+    (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
+
     # check if the positive pair is already in the tsv file
-    if check_if_in_tsv(read_anchor_sid, read_pos_sid, outdir):
-         # resampling positive pair
-         (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
+    if check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir):
+        # resampling positive pair
+        (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
+      
 
     # get negative pair for the anchor read
     (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
 
     # check if the negative pair is already in the tsv file
-    if check_if_in_tsv(read_anchor_sid, read_negative_sid, outdir):
+    if check_if_in_tsv(sample1[0], sample2[0], read_anchor_sid, read_negative_sid, outdir):
         # resampling negative pair
         (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
-    
+
     if ed_neg <= ed_pos:
         print("negative sample is too similar to anchor read, writing only positive pair to tsv file")
         write_to_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, "positive", gr_key, len(read_anchor), len(read_positive), lineage1, lineage1, outdir)
@@ -153,13 +179,13 @@ def sample(genomic_region, sample1, sample2, outdir):
 
 def main():
     parser = argparse.ArgumentParser(description="Split multi-fasta files into single fasta files")
-    parser.add_argument('--n', dest = 'num', required=True, type=str, help="number of samples to produce")
+    parser.add_argument('--n', dest = 'num', required=True, type=int, help="number of samples to produce")
     parser.add_argument('--dir', dest = 'data_dir', required=True, type=str, help="data directory to sample from")
     parser.add_argument('--out', dest = 'out_dir', required=True, type=str, help="output directory to write samples to")
     args = parser.parse_args()
 
     data_directory = args.data_dir
-    num_samples = args.num
+    num = args.num
     out_dir = args.out_dir
 
     # check if output directory exists
@@ -218,7 +244,7 @@ def main():
     info = [(f.split("/")[-1][:-6], "/".join(f.split("/")[:-1])) for f in fasta_files]
 
     count = 0
-    while count < num_samples:
+    while count < num:
         # sample a random genomic region with equal probability
         genomic_region = genomic_regions[random.randint(0, len(genomic_regions) - 1)]
         
@@ -226,7 +252,10 @@ def main():
         info_sample = random.sample(info, 2)
 
         # sample the reads
-        num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir)
+        try:
+            num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir)
+        except KeyError: 
+            print("genomic region not found in one of the genomes selected: ", genomic_region, " continuing to next iteration")
 
         count += num_samples
         print("number of samples: ", count)
