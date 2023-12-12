@@ -231,6 +231,8 @@ def main():
         count += num_samples
         print("number of samples: ", count)
 
-
+    print("finished sampling")
+    print('Total number of samples: ', count)
+    
 if __name__ == "__main__":
     sys.exit(main())
