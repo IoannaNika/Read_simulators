@@ -7,7 +7,7 @@ import editdistance
 import csv
 
 
-def parse_maf_file(maf_file, read_id):
+def parse_maf_file(maf_file):
     maf_dict = {}
     with open(maf_file, "r") as f:
         lines = f.readlines()
@@ -18,7 +18,7 @@ def parse_maf_file(maf_file, read_id):
             next_line = lines[cnt+1].strip().split(" ")
             genomic_region = next_line[1].split(":")[1]
             next_line = lines[cnt+2].strip().split(" ")
-            sim_read_id ="/".join(next_line[1].split("/")[:-1])
+            sim_read_id = "/".join(next_line[1].split("/")[:-1])
             if genomic_region not in maf_dict.keys():
                 maf_dict[genomic_region] = set()
                 maf_dict[genomic_region].add(sim_read_id)
@@ -56,14 +56,15 @@ def parse_fastq(fastq_file):
 
 def sample_negative_pair(read_anchor, maf_dict_2, reads2, gr_key):
     # get negative pair of reads from the same genomic region
-    read_negative_sid = random.sample(list(maf_dict_2[gr_key]),1)
+    # find interection between maf_dict_2[gr_key] and reads2.keys()
+    # sample one of the reads from the intersection
 
-    while read_negative_sid[0] not in reads2.keys():
-        print("Negative read not in the fastq file")
-        print(read_negative_sid[0], reads2.keys())
+    intersection = maf_dict_2[gr_key].intersection(set(reads2.keys()))
+    if len(intersection) == 0:
+        print("no reads in the intersection")
         raise Exception
 
-        read_negative_sid = random.sample(list(maf_dict_2[gr_key]),1)
+    read_negative_sid = random.sample(list(intersection),1)
 
     reads_negative = reads2[read_negative_sid[0]]
     ed_neg =  editdistance.eval(read_anchor, reads_negative)
@@ -89,13 +90,14 @@ def check_if_in_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, outdir):
 
 def sample_positive_pair(maf_dict_1, reads1, gr_key):
     # sample positive pair of reads from the same genomic region
-    reads_positive = random.sample(list(maf_dict_1[gr_key]), 2)
-  
-    while reads_positive[0] not in reads1.keys() or reads_positive[1] not in reads1.keys():
-        print("At least one of the positive reads not in the fastq file")
-        print(reads_positive[0], reads_positive[1], reads1.keys())
+    # find intersection between maf_dict_1[gr_key] and reads1.keys()
+    # sample two reads from the intersection
+    intersection = maf_dict_1[gr_key].intersection(set(reads1.keys()))
+    if len(intersection) < 2:
+        print("not enough reads in the intersection")
         raise Exception
-        reads_positive = random.sample(list(maf_dict_1[gr_key]), 2)
+  
+    reads_positive = random.sample(list(intersection), 2)
     
     read_anchor = reads1[reads_positive[0]]
     read_anchor_sid = reads_positive[0]
@@ -137,8 +139,8 @@ def sample(genomic_region, sample1, sample2, outdir):
 
     gr_key  = str(genomic_region[0]) + "_" + str(genomic_region[1])
 
-    maf_dict_1 = parse_maf_file(maf_file_1, sample1[0]) # genomic region -> simulated read id 
-    maf_dict_2 = parse_maf_file(maf_file_2, sample2[0])
+    maf_dict_1 = parse_maf_file(maf_file_1) # genomic region -> simulated read id 
+    maf_dict_2 = parse_maf_file(maf_file_2)
 
     reads_1 = parse_fastq(fastq_file_1) # simulated read id -> read
     reads_2 = parse_fastq(fastq_file_2)
@@ -262,6 +264,6 @@ def main():
 
     print("finished sampling")
     print('Total number of samples: ', count)
-    
+
 if __name__ == "__main__":
     sys.exit(main())
