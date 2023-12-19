@@ -47,8 +47,8 @@ def main():
     count = 0
     strand = ["+", "-"]
     tsvs = [tsv1, tsv2]
-    while count < n:
 
+    while count < n:
 
         # from each tsv file find reads that span the same region and are on the same strand
         
@@ -76,6 +76,7 @@ def main():
         read_anchor = reads.iloc[0]
         read_pos = reads.iloc[1]
         ed_pos = editdistance.eval(read_anchor["read"], read_pos["read"])
+
         # write to tsv file
         with open(outfile, "a") as f:
             f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos))
@@ -89,12 +90,15 @@ def main():
         
         # sample uniformly a read from the negative tsv file
         tsv_neg = tsv_neg[(tsv_neg["strand"] == s) & (tsv_neg["start"] == start) & (tsv_neg["end"] == end)]
+        
         if tsv_neg.shape[0] == 0:
             print("No reads that span the region")
             continue
+
         read_neg = tsv_neg.sample(1)
         read_neg = read_neg.iloc[0]
         ed_neg = editdistance.eval(read_anchor["read"], read_neg["read"])
+
         if ed_neg < 1:
             continue
         # write to tsv file
