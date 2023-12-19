@@ -11,3 +11,11 @@ def main():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--tsv', dest = 'tsv_file', required=True, type=int, help="")
     args = parser.parse_args()
+
+    tsv_file = args.tsv_file
+
+    
+
+
+if __name__ == "__main__":
+    sys.exit(main())
