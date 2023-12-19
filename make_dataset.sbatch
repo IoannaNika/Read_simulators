@@ -8,4 +8,4 @@
 #SBATCH --mem=2048
 #SBATCH --gres=gpu:0 
 
-srun python make_amplicon_tuples.py --n 100000 --dir data/hcov_global_2023-11-16_09-28 --out data/dataset_100000
+srun python make_amplicon_tuples.py --n 50 --dir data/hcov_global_2023-11-16_09-28 --out data/dataset
