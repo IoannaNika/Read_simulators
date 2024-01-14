@@ -12,12 +12,14 @@ def main():
     parser.add_argument('--tsv2', dest = 'tsv2', required=True, type=str, help="")
     parser.add_argument("--n", dest="n", required=True, type=int, help="")
     parser.add_argument('--out', dest = 'out', required=True, type=str, help="")
+    parser.add_argument('--singles', dest = 'singles', required=False, default=True, type=bool, help="")
     args = parser.parse_args()
 
     tsv1_file = args.tsv1
     tsv2_file = args.tsv2
     n = args.n
     outfile = args.out
+    singles = args.singles
 
     # if outfile exists, delete it
     if os.path.exists(outfile):
@@ -26,7 +28,10 @@ def main():
     open(outfile, 'x').close()
     # write header for the tsv file
     with open(outfile, "a") as f:
-        f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+        if singles == False: 
+            f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+        else: 
+            f.write("id\tread\tgenomic_regions\tfile\n")
 
     # Read in the tsv files
     tsv1 = pd.read_csv(tsv1_file, sep="\t")
@@ -79,7 +84,10 @@ def main():
 
         # write to tsv file
         with open(outfile, "a") as f:
-            f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos))
+            if singles == False:
+                f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos))
+            else: 
+                f.write("{}\t{}\t{}\t{}\n".format(read_anchor["id"], read_anchor["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), indx))
         count += 1
 
         # sample a negative sample for the anchor
@@ -104,11 +112,19 @@ def main():
         # write to tsv file
         if ed_neg <= ed_pos:
             with open(outfile, "a") as f:
-                f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("hard negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                if singles == False:
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("hard negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                else: 
+                    f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" +  str(read_anchor["end"]), 1-indx))
+
             count += 1
         else:
             with open(outfile, "a") as f:
-                f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                if singles == False:
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                else:
+                    f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), 1-indx))
+
             count += 1
 
 if __name__ == "__main__":

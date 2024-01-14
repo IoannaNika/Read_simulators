@@ -1,2 +1,2 @@
 # Read_simulators
-Scripts for simulating long reads
+Scripts for simulating long reads and creating datasets

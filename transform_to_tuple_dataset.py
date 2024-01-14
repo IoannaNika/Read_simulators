@@ -8,7 +8,7 @@ import csv
 
 
 def main():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Transform triplets to tuples")
     parser.add_argument('--tsv', dest = 'tsv_file', required=True, type=str, help="")
     parser.add_argument('--out', dest = 'out', required=True, type=str, help="")
     args = parser.parse_args()
@@ -28,27 +28,25 @@ def main():
     open(outfile, 'x').close()
     # write header to the outfile
     with open(outfile, "a") as f:
-        f.write("read_id\tgenomic_region\tlabel\n")
+        f.write("read_1\tread_2\tgenomic_region\tlabel\tlineage_r1\tlineage_r2\n")
 
     # go through the tsv file to map it to the new tsv file
     for indx, row in tsv.iterrows():
         # read 1
-        read_id_1 = row["read_1"]
-        genomic_region_1 = row["genomic_region"]
-        label_1 = "_".join(read_id_1.split("_")[:-1])
+        read_anch = row["read_anch"]
+        read_pos = row["read_pos"]
+        read_neg = row["read_neg"]
+        label_neg = row["neg_label"]
+        label_pos = "positive"
+        genomic_region = row["genomic_region"]
+        lineage_pos = row["lineage_pos"]
+        lineage_neg = row["lineage_neg"]
 
-        # read 2
-        read_id_2 = row["read_2"]
-        genomic_region_2 = row["genomic_region"]
-        label_2 = "_".join(read_id_2.split("_")[:-1])
 
         # write to the new tsv file
         with open(outfile, "a") as f:
-            f.write(f"{read_id_1}\t{genomic_region_1}\t{label_1}\n")
-            f.write(f"{read_id_2}\t{genomic_region_2}\t{label_2}\n")
-
-
-
+            f.write(f"{read_anch}\t{read_pos}\t{genomic_region}\t{label_pos}\t{lineage_pos}\t{lineage_pos}\n")
+            f.write(f"{read_anch}\t{read_neg}\t{genomic_region}\t{label_neg}\t{lineage_neg}\t{lineage_neg}\n")
 
 if __name__ == "__main__":
     sys.exit(main())

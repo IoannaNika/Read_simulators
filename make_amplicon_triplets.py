@@ -70,22 +70,28 @@ def sample_negative_pair(read_anchor, maf_dict_2, reads2, gr_key):
     ed_neg =  editdistance.eval(read_anchor, reads_negative)
     return (read_negative_sid[0], reads_negative), ed_neg
 
-def check_if_in_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, outdir):
+def check_if_in_tsv(gisaid_id_1, gisaid_id_2, gisaid_id_3, read_1_sid, read_2_sid, read_3_sid, outdir):
     # load tsv file 
-    tsv_file = os.path.join(outdir, "samples.tsv")
+    tsv_file = os.path.join(outdir, "triplets.tsv")
 
     out_df = pd.read_csv(tsv_file, sep="\t", header=0)
 
     complete_read_id_1 = gisaid_id_1 + "_" + read_1_sid.replace("/", "")
     complete_read_id_2 = gisaid_id_2 + "_" + read_2_sid.replace("/", "")
+    complete_read_id_3 = gisaid_id_3 + "_" + read_3_sid.replace("/", "")
 
-    if complete_read_id_1 in out_df["read_1"].values and complete_read_id_2 in out_df["read_2"].values:
-        print("positive pair is already in tsv file")
+    if complete_read_id_1 in out_df["read_anch"].values and complete_read_id_2 in out_df["read_pos"].values and complete_read_id_3 in out_df["read_neg"]:
         return True
-    if complete_read_id_1 in out_df["read_2"].values and complete_read_id_2 in out_df["read_1"].values:
-        print("positive pair is already in tsv file")
+    if complete_read_id_1 in out_df["read_anch"].values and complete_read_id_2 in out_df["read_neg"].values and complete_read_id_3 in out_df["read_pos"]:
         return True
-    
+    if complete_read_id_1 in out_df["read_pos"].values and complete_read_id_2 in out_df["read_anch"].values and complete_read_id_3 in out_df["read_neg"]:
+        return True
+    if complete_read_id_1 in out_df["read_pos"].values and complete_read_id_2 in out_df["read_neg"].values and complete_read_id_3 in out_df["read_anch"]:
+        return True
+    if complete_read_id_1 in out_df["read_neg"].values and complete_read_id_2 in out_df["read_pos"].values and complete_read_id_3 in out_df["read_anch"]:
+        return True
+    if complete_read_id_1 in out_df["read_neg"].values and complete_read_id_2 in out_df["read_anch"].values and complete_read_id_3 in out_df["read_pos"]:
+        return True
     return False
 
 def sample_positive_pair(maf_dict_1, reads1, gr_key):
@@ -107,15 +113,16 @@ def sample_positive_pair(maf_dict_1, reads1, gr_key):
     return (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos
 
 
-def write_to_tsv(gisaid_id_1, gisaid_id_2, read_1_sid, read_2_sid, label, genomic_region, read_length1, read_length2, lineage1, lineage2, ed, outdir):
+def write_to_tsv(gisaid_id_1, gisaid_id_2, gisaid_id_3, read_1_sid, read_2_sid, read_3_sid, label, genomic_region, read_length1, read_length2, read_length3, lineage1, lineage2, outdir):
     complete_read_id_1 = gisaid_id_1 + "_" + read_1_sid.replace("/", "")
     complete_read_id_2 = gisaid_id_2 + "_" + read_2_sid.replace("/", "")
+    complete_read_id_3 = gisaid_id_3 + "_" + read_3_sid.replace("/", "")
     # Header: read_1 read_2 label genomic_region read_length lineage
-    tsv_file = os.path.join(outdir, "samples.tsv")
+    tsv_file = os.path.join(outdir, "triplets.tsv")
     # load tsv file
     with open(tsv_file, 'a') as tsvfile:
         writer = csv.writer(tsvfile, delimiter="\t")
-        writer.writerow([complete_read_id_1, complete_read_id_2, label, genomic_region, read_length1, read_length2, lineage1, lineage2, ed])
+        writer.writerow([complete_read_id_1, complete_read_id_2, complete_read_id_3, label, genomic_region, read_length1, read_length2,read_length3, lineage1, lineage2])
     return 
 
 
@@ -147,37 +154,30 @@ def sample(genomic_region, sample1, sample2, outdir):
     # get positive pair
     (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
 
-    # check if the positive pair is already in the tsv file
-    while check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir):
-        # resampling positive pair
-        (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
-      
-
     # get negative pair for the anchor read
     (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
+    # if negative pair is exactly the same return
+    
+    if ed_neg == 0:
+        print("negative pair is identical, will begin sampling a new sample")
+        return 0
 
-    # check if the negative pair is already in the tsv file or the negative pair is actually identical reads
-    while check_if_in_tsv(sample1[0], sample2[0], read_anchor_sid, read_negative_sid, outdir) or ed_neg == 0:
-        # resampling negative pair
-        (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
+    # check if triplet is in the file
+    if check_if_in_tsv(sample1[0], sample1[0], sample2[0], read_anchor_sid, read_pos_sid, read_negative_sid, outdir):
+        return 0
 
+    # write triplet to tsv file 
     if ed_neg <= ed_pos:
-        write_to_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, "positive", gr_key, len(read_anchor), len(read_positive), lineage1, lineage1, ed_pos, outdir)
-        write_to_tsv(sample1[0], sample2[0], read_anchor_sid, read_negative_sid, "hard negative", gr_key, len(read_anchor), len(read_negative), lineage1, lineage2, ed_neg, outdir)
-        write_to_fasta(sample1[0], read_anchor_sid, read_anchor, outdir)
-        write_to_fasta(sample1[0], read_pos_sid, read_positive, outdir)
-        write_to_fasta(sample2[0], read_negative_sid, read_negative, outdir)
-        return  2
-    
-    # write to tsv file both positive and negative pair
-    write_to_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, "positive", gr_key, len(read_anchor), len(read_positive), lineage1, lineage1, ed_pos, outdir)
-    write_to_tsv(sample1[0], sample2[0], read_anchor_sid, read_negative_sid, "negative", gr_key, len(read_anchor), len(read_negative), lineage1, lineage2, ed_neg, outdir)
-    
+        write_to_tsv(sample1[0], sample1[0], sample2[0], read_anchor_sid, read_pos_sid, read_negative_sid, "hard negative", gr_key, len(read_anchor), len(read_positive), len(read_negative), lineage1, lineage2, outdir)
+    else:
+        write_to_tsv(sample1[0], sample1[0], sample2[0], read_anchor_sid, read_pos_sid, read_negative_sid, "negative", gr_key, len(read_anchor), len(read_positive), len(read_negative), lineage1, lineage2, outdir)
+
+   
     # write to fasta file
     write_to_fasta(sample1[0], read_anchor_sid, read_anchor, outdir)
     write_to_fasta(sample1[0], read_pos_sid, read_positive, outdir)
     write_to_fasta(sample2[0], read_negative_sid, read_negative, outdir)
-    return 2
+    return 1
     
 
 def main():
@@ -203,16 +203,16 @@ def main():
                 os.remove(os.path.join(out_dir, file))
 
     # make tsv file to write the samples to
-    tsv_file = os.path.join(out_dir, "samples.tsv")
+    tsv_file = os.path.join(out_dir, "triplets.tsv")
 
     if not os.path.exists(tsv_file):
         with open(tsv_file, "w") as f:
-            f.write("read_1\tread_2\tlabel\tgenomic_region\tread_length_r1\tread_length_r2\tlineage_r1\tlineage_r2\tedit_distance\n")
+            f.write("read_anch\tread_pos\tread_neg\tneg_label\tgenomic_region\tread_length_anch\tread_length_pos\tread_length_neg\tlineage_pos\tlineage_neg\n")
     else:
         # if it exist remove and create a new one
         os.remove(tsv_file)
         with open(tsv_file, "w") as f:
-            f.write("read_1\tread_2\tlabel\tgenomic_region\tread_length_r1\tread_length_r2\\tlineage_r1\tlineage_r2\ttedit_distance\n")
+            f.write("read_anch\tread_pos\tread_neg\tneg_label\tgenomic_region\tread_length_anch\tread_length_pos\tread_length_neg\tlineage_pos\tlineage_neg\n")
 
     # make a read directory if it doesn't exist
     read_dir = os.path.join(out_dir, "reads")
