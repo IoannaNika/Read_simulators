@@ -44,7 +44,10 @@ def main():
             no_gisaid_epi_isl += 1
             continue
 
-        pango_lineage = metadata_df.loc[metadata_df['strain'] == strain, 'pango_lineage'].iloc[0]
+        try: 
+            pango_lineage = metadata_df.loc[metadata_df['strain'] == strain, 'pango_lineage'].iloc[0]
+        except:
+            pango_lineage = metadata_df.loc[metadata_df['strain'] == strain, 'Clade / Lineage'].iloc[0].replace(" ", "_")
         
         if pango_lineage == "?":
             print ("pango_lineage not found for strain: " + strain)

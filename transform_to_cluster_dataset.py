@@ -8,7 +8,7 @@ import csv
 
 
 def main():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="From tuple dataset to single dataset")
     parser.add_argument('--tsv', dest = 'tsv_file', required=True, type=str, help="")
     parser.add_argument('--out', dest = 'out', required=True, type=str, help="")
     args = parser.parse_args()
@@ -46,9 +46,6 @@ def main():
         with open(outfile, "a") as f:
             f.write(f"{read_id_1}\t{genomic_region_1}\t{label_1}\n")
             f.write(f"{read_id_2}\t{genomic_region_2}\t{label_2}\n")
-
-
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--tsv2', dest = 'tsv2', required=True, type=str, help="")
     parser.add_argument("--n", dest="n", required=True, type=int, help="")
     parser.add_argument('--out', dest = 'out', required=True, type=str, help="")
-    parser.add_argument('--singles', dest = 'singles', required=False, default=True, type=bool, help="")
+    parser.add_argument('--singles', dest = 'singles', required=True, default=False, type=bool, help="")
     args = parser.parse_args()
 
     tsv1_file = args.tsv1
@@ -47,7 +47,7 @@ def main():
                          (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
                         (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
                          (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
-                          (26766, 27872), (27808, 28985), (28699, 29768)]
+                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
 
     count = 0
     strand = ["+", "-"]
