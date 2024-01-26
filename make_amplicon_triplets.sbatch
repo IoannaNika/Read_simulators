@@ -8,4 +8,4 @@
 #SBATCH --mem=2048
 #SBATCH --gres=gpu:0 
 
-srun python make_amplicon_triplets.py --n 500000 --dir data/hcov_global_2023-11-16_09-28 --out data/triplet_dataset_test_500000
+srun python make_amplicon_triplets.py --n 100000 --dir data/hcov_global_2023-11-16_09-28_primers_template --out data/triplet_dataset_primers_template_excl_neg_identicals_100000

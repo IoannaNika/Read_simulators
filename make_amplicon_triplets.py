@@ -54,6 +54,38 @@ def parse_fastq(fastq_file):
 
     return reads
 
+def parse_template_fasta(template_file):
+    with open(template_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [x.strip() for x in lines]
+    l = 0
+    reads = {}
+    while l < len(lines):
+        if lines[l].startswith(">"):
+            read_name = lines[l][1:-2] # e.g. >EPI_ISL_2683873:54_1183:1 -> EPI_ISL_2683873:54_1183
+            l+=1
+            read = lines[l]
+            l+=1
+            reads[read_name] = read
+            l+=18 # in the template file there are 10 same reads, so skip them
+    return reads
+
+def check_template_sequence(read_anchor_gisaid_id, read_negative_gisaid_id, genomic_region, directory_acnhor, directory_negative):
+    # load the template sequence from which the read was simulated
+    template_file_anchor = os.path.join(directory_acnhor, read_anchor_gisaid_id + ".template")
+    template_reads = parse_template_fasta(template_file_anchor)
+    template_file_negative = os.path.join(directory_negative, read_negative_gisaid_id + ".template")
+    template_reads_negative = parse_template_fasta(template_file_negative)
+    id_anch = read_anchor_gisaid_id + ":" + str(genomic_region[0]) + "_" + str(genomic_region[1])
+    id_neg = read_negative_gisaid_id + ":" + str(genomic_region[0]) + "_" + str(genomic_region[1])
+    # check if the template sequence from which the negative read was simulated is the same as the template sequence from which the anchor read was simulated
+    ed = editdistance.eval(template_reads[id_anch],template_reads_negative[id_neg])
+    if ed <= 0:
+        return False
+    return True
+
+
 def sample_negative_pair(read_anchor, maf_dict_2, reads2, gr_key):
     # get negative pair of reads from the same genomic region
     # find interection between maf_dict_2[gr_key] and reads2.keys()
@@ -158,6 +190,10 @@ def sample(genomic_region, sample1, sample2, outdir):
     (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
     # if negative pair is exactly the same return
     
+    if not check_template_sequence(sample1[0], sample2[0], genomic_region, sample1[1], sample2[1]):
+        print("negative pair is identical, will begin sampling a new sample")
+        return 0
+
     if ed_neg == 0:
         print("negative pair is identical, will begin sampling a new sample")
         return 0
