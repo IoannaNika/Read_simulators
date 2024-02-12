@@ -9,4 +9,4 @@
 #SBATCH --gres=gpu:0 
 
 # srun python make_amplicon_tuples.py --n 500000 --dir data/hcov_global_2023-11-16_09-28 --out data/dataset_500000
-srun python make_amplicon_tuples.py --n 400 --dir data/test_datasets/pox_B.1.17 --out data/test_datasets/pox_B.1.17/dataset
+srun python make_amplicon_tuples.py --n 300 --dir data/test_datasets/test_set_BA.2 --out data/test_datasets/test_set_BA.2/dataset
