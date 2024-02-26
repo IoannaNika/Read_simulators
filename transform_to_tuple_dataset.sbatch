@@ -9,4 +9,4 @@
 #SBATCH --mail-type=END
 #SBATCH --gres=gpu:0 
 
-python transform_to_tuple_dataset.py --tsv data/triplet_dataset_primers_template_excl_neg_identicals_100000/triplets.tsv --out data/triplet_dataset_primers_template_excl_neg_identicals_100000/samples.tsv
+python transform_to_tuple_dataset.py --tsv data/triplet_dataset_primers_template_excl_neg_identicals_327896/triplets.tsv --out data/triplet_dataset_primers_template_excl_neg_identicals_327896/samples.tsv
