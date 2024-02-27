@@ -6,6 +6,36 @@ import random
 import editdistance
 import csv
 
+def parse_template_fasta(template_file):
+    with open(template_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [x.strip() for x in lines]
+    l = 0
+    reads = {}
+    while l < len(lines):
+        if lines[l].startswith(">"):
+            read_name = lines[l][1:-2] # e.g. >EPI_ISL_2683873:54_1183:1 -> EPI_ISL_2683873:54_1183
+            l+=1
+            read = lines[l]
+            l+=1
+            reads[read_name] = read
+            l+=18 # in the template file there are 10 same reads, so skip them
+    return reads
+
+def check_template_sequence(read_anchor_gisaid_id, read_negative_gisaid_id, genomic_region, directory_acnhor, directory_negative):
+    # load the template sequence from which the read was simulated
+    template_file_anchor = os.path.join(directory_acnhor, read_anchor_gisaid_id + ".template")
+    template_reads = parse_template_fasta(template_file_anchor)
+    template_file_negative = os.path.join(directory_negative, read_negative_gisaid_id + ".template")
+    template_reads_negative = parse_template_fasta(template_file_negative)
+    id_anch = read_anchor_gisaid_id + ":" + str(genomic_region[0]) + "_" + str(genomic_region[1])
+    id_neg = read_negative_gisaid_id + ":" + str(genomic_region[0]) + "_" + str(genomic_region[1])
+    # check if the template sequence from which the negative read was simulated is the same as the template sequence from which the anchor read was simulated
+    ed = editdistance.eval(template_reads[id_anch],template_reads_negative[id_neg])
+    if ed <= 0:
+        return False
+    return True
 
 def parse_maf_file(maf_file):
     maf_dict = {}
@@ -152,7 +182,6 @@ def sample(genomic_region, sample1, sample2, outdir):
         # resampling positive pair
         (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
       
-
     # get negative pair for the anchor read
     (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
 
@@ -160,6 +189,15 @@ def sample(genomic_region, sample1, sample2, outdir):
     while check_if_in_tsv(sample1[0], sample2[0], read_anchor_sid, read_negative_sid, outdir) or ed_neg == 0:
         # resampling negative pair
         (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
+
+    
+    if not check_template_sequence(sample1[0], sample2[0], genomic_region, sample1[1], sample2[1]):
+        print("negative pair is identical, will begin sampling a new sample")
+        return 0
+
+    if ed_neg == 0:
+        print("negative pair is identical, will begin sampling a new sample")
+        return 0
 
     if ed_neg <= ed_pos:
         write_to_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, "positive", gr_key, len(read_anchor), len(read_positive), lineage1, lineage1, ed_pos, outdir)
@@ -224,14 +262,17 @@ def main():
             for file in os.listdir(read_dir):
                 os.remove(os.path.join(read_dir, file))
 
+    # sars-cov-2
+    # genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
+    #                    (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
+    #                     (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
+    #                      (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
+    #                     (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
+    #                      (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
+    #                       (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
 
-    genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
-                       (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
-                        (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
-                         (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
-                        (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
-                         (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
-                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
+    # HIV-1
+    genomic_regions = [(140, 1081), (980, 1927), (1824, 2807), (2696, 3679), (3583, 4564), (4429, 5398), (5291, 6249), (6143, 7140), (6968, 7955), (7864, 8844), (8053, 8970)]
     
 
     # get all fasta files in the data directory and subdirectories

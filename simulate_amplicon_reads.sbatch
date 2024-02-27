@@ -10,4 +10,4 @@
 #SBATCH --gres=gpu:0 
 
 
-python simulate_amplicon_reads.py --dir data/Zika/Gisaid_dataset_2024_02_12_12/
+python simulate_amplicon_reads.py --dir data/HIV-1-NCBI/subselection_95/NCBI_processed
