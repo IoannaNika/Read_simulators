@@ -17,6 +17,7 @@ def parse_R_output(output):
 def get_amplicon_positions(Fprob, Rprob, seq_path):
     # call r script to get amplicon positions
     results = subprocess.run(["Rscript match_primers.R " + Fprob + " " + Rprob + " " + seq_path], shell=True, capture_output=True, text=True)
+    print("Results: ", results.stdout)
     results = parse_R_output(results.stdout)
     start = int(results[0]) + len(Fprob)
     end = int(results[1]) - len(Rprob)

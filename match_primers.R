@@ -6,7 +6,7 @@ library(seqinr)
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args)!= 3) 
-   stop("Three arguments must be supplied: Fprobe, Rprobe and the sequence", call.=FALSE)[1]
+   stop("Three arguments must be supplied: Fprobe, Rprobe and the sequence", call=FALSE)[1]
 
 seqfile <-args[3]
 sequence <- read.fasta(seqfile, as.string = TRUE, seqonly = TRUE)[[1]]

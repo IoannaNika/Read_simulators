@@ -5,6 +5,11 @@ import sys
 import argparse
 from Bio import SeqIO
 
+
+def simulate_ONT_HQ_reads(directory, identifier, cores): 
+    os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_models/ERRHMM-ONT-HQ.model  --template {}/{}.template --pass-num 10 --seed 20 --prefix {}/{}".format(directory, identifier, directory, identifier))
+    return
+
 def simulate_hifi_reads(directory, identifier, cores):
     os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_models/ERRHMM-SEQUEL.model  --template {}/{}.template --pass-num 10 --seed 20 --prefix {}/{}".format(directory, identifier, directory, identifier))
     os.system("samtools view -bS {}/{}.sam > {}/{}.bam".format(directory, identifier, directory, identifier))
@@ -15,9 +20,11 @@ def main():
     parser = argparse.ArgumentParser(description="Simulates pacbio hifi amplicon reads")
     parser.add_argument('--dir', dest = 'dir', required=True, type=str, help="path to data directory")
     parser.add_argument('--cores', dest = 'cores', default=8, required=False, type=int, help="cpu cores for the simulation")
+    parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=False, type=str, help="ONT-HQ or pacbio-hifi")    
     args = parser.parse_args()
 
     cores = args.cores
+    strategy = args.strategy
 
     # get directories in data directory
     data_dir = args.dir
@@ -37,7 +44,11 @@ def main():
         
         for file in files:
             identifier = file.split(".template")[0]
-            simulate_hifi_reads(directory, identifier, cores)
+            if strategy == "pacbio-hifi":
+                simulate_hifi_reads(directory, identifier, cores)
+            if strategy == "ONT-HQ": 
+                simulate_ONT_HQ_reads(directory, identifier, cores)
+
 
     print("Done")
 

@@ -10,4 +10,4 @@
 #SBATCH --gres=gpu:0 
 
 
-python simulate_amplicon_reads.py --dir data/HCV-1b-NCBI/subselection_95
+python simulate_amplicon_reads.py --dir  data/hcov_global_2023-11-16_09-28_ONT/ --strategy ONT-HQ

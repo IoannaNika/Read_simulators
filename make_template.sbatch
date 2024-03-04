@@ -10,5 +10,4 @@
 #SBATCH --gres=gpu:0 
 
 
-python make_template_from_fasta.py --dir data/hcov_global_2023-11-16_09-28/
-# bash simulate_amplicon_reads.sh
+python make_template_from_fasta.py --dir data/hcov_global_2023-11-16_09-28_ONT/
