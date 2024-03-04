@@ -33,6 +33,7 @@ def check_template_sequence(read_anchor_gisaid_id, read_negative_gisaid_id, geno
     id_neg = read_negative_gisaid_id + ":" + str(genomic_region[0]) + "_" + str(genomic_region[1])
     # check if the template sequence from which the negative read was simulated is the same as the template sequence from which the anchor read was simulated
     ed = editdistance.eval(template_reads[id_anch],template_reads_negative[id_neg])
+    print(ed)
     if ed <= 0:
         return False
     return True
@@ -271,9 +272,11 @@ def main():
     #                      (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
     #                       (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
 
-    # HIV-1
-    genomic_regions = [(140, 1081), (980, 1927), (1824, 2807), (2696, 3679), (3583, 4564), (4429, 5398), (5291, 6249), (6143, 7140), (6968, 7955), (7864, 8844), (8053, 8970)]
+    # # HIV-1
+    # genomic_regions = [(140, 1081), (980, 1927), (1824, 2807), (2696, 3679), (3583, 4564), (4429, 5398), (5291, 6249), (6143, 7140), (6968, 7955), (7864, 8844), (8053, 8970)]
     
+    # HCV-1b
+    genomic_regions = [(72, 1065), (985, 1946), (1842, 2800), (2703, 3698), (3495, 4459), (4314, 5279), (5215, 6167), (6068, 7008), (6930, 7899), (7740, 8681), (8300, 9280)]
 
     # get all fasta files in the data directory and subdirectories
     fasta_files = []
