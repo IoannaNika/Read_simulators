@@ -59,6 +59,27 @@ def parse_maf_file(maf_file):
             cnt += 4
     return maf_dict
 
+def parse_maf_file_ONT(maf_file):
+    maf_dict = {}
+    with open(maf_file, "r") as f:
+        lines = f.readlines()
+
+    cnt = 0
+    while cnt < len(lines):
+        if lines[cnt].startswith("a"):
+            next_line = lines[cnt+1].strip().split(" ")
+            genomic_region = next_line[1].split(":")[1]
+            next_line = lines[cnt+2].strip().split(" ")
+            sim_read_id = next_line[1].strip()
+            if genomic_region not in maf_dict.keys():
+                maf_dict[genomic_region] = set()
+                maf_dict[genomic_region].add(sim_read_id)
+            else:
+                maf_dict[genomic_region].add(sim_read_id)
+
+            cnt += 4
+    return maf_dict
+
 def parse_fastq(fastq_file):
 
     reads = {}
@@ -76,6 +97,29 @@ def parse_fastq(fastq_file):
         # [S, 1] -> lines[l].split(" ")[0][1:].split("/")[:-1]
         # S/1 -> "/".join(lines[l].split(" ")[0][1:].split("/")[:-1])
         read_name = "/".join(lines[l].split(" ")[0][1:].split("/")[:-1])
+        l+=1
+        read = lines[l]
+        l+=2
+        # quality_score = lines[l]
+        l+=1
+        reads[read_name] = read
+
+    return reads
+
+
+def parse_fastq_ONT(fastq_file):
+
+    reads = {}
+
+    with open(fastq_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [x.strip() for x in lines]
+
+    l = 0
+    while(l!= len(lines)):
+        # @S_1
+        read_name = lines[l].strip()[1:]
         l+=1
         read = lines[l]
         l+=2
@@ -158,7 +202,7 @@ def write_to_fasta(genome_id, read_sid, read, outdir):
         f.write(read + "\n")
     return
 
-def sample(genomic_region, sample1, sample2, outdir):
+def sample(genomic_region, sample1, sample2, outdir, strategy):
     lineage1 = sample1[1].split("/")[-1]
     lineage2 = sample2[1].split("/")[-1]
     maf_file_1 = os.path.join(sample1[1], sample1[0] + ".maf")
@@ -169,11 +213,19 @@ def sample(genomic_region, sample1, sample2, outdir):
 
     gr_key  = str(genomic_region[0]) + "_" + str(genomic_region[1])
 
-    maf_dict_1 = parse_maf_file(maf_file_1) # genomic region -> simulated read id 
-    maf_dict_2 = parse_maf_file(maf_file_2)
+    if strategy == "ONT": 
+        maf_dict_1 = parse_maf_file_ONT(maf_file_1)
+        maf_dict_2 = parse_maf_file_ONT(maf_file_2)
+    else: 
+        maf_dict_1 = parse_maf_file(maf_file_1) # genomic region -> simulated read id 
+        maf_dict_2 = parse_maf_file(maf_file_2)
 
-    reads_1 = parse_fastq(fastq_file_1) # simulated read id -> read
-    reads_2 = parse_fastq(fastq_file_2)
+    if strategy == "ONT": 
+        reads_1 = parse_fastq_ONT(fastq_file_1) # simulated read id -> read
+        reads_2 = parse_fastq_ONT(fastq_file_2)
+    else: 
+        reads_1 = parse_fastq(fastq_file_1) # simulated read id -> read
+        reads_2 = parse_fastq(fastq_file_2)
 
     # get positive pair
     (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
@@ -224,11 +276,13 @@ def main():
     parser.add_argument('--n', dest = 'num', required=True, type=int, help="number of samples to produce")
     parser.add_argument('--dir', dest = 'data_dir', required=True, type=str, help="data directory to sample from")
     parser.add_argument('--out', dest = 'out_dir', required=True, type=str, help="output directory to write samples to")
+    parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=True, type=str, help="ONT or pacbio-hifi")    
     args = parser.parse_args()
 
     data_directory = args.data_dir
     num = args.num
     out_dir = args.out_dir
+    strategy = args.strategy
 
     # check if output directory exists
     if not os.path.exists(out_dir):
@@ -264,19 +318,19 @@ def main():
                 os.remove(os.path.join(read_dir, file))
 
     # sars-cov-2
-    # genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
-    #                    (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
-    #                     (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
-    #                      (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
-    #                     (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
-    #                      (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
-    #                       (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
+    genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
+                       (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
+                        (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
+                         (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
+                        (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
+                         (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
+                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
 
     # # HIV-1
     # genomic_regions = [(140, 1081), (980, 1927), (1824, 2807), (2696, 3679), (3583, 4564), (4429, 5398), (5291, 6249), (6143, 7140), (6968, 7955), (7864, 8844), (8053, 8970)]
     
     # HCV-1b
-    genomic_regions = [(72, 1065), (985, 1946), (1842, 2800), (2703, 3698), (3495, 4459), (4314, 5279), (5215, 6167), (6068, 7008), (6930, 7899), (7740, 8681), (8300, 9280)]
+    # genomic_regions = [(72, 1065), (985, 1946), (1842, 2800), (2703, 3698), (3495, 4459), (4314, 5279), (5215, 6167), (6068, 7008), (6930, 7899), (7740, 8681), (8300, 9280)]
 
     # get all fasta files in the data directory and subdirectories
     fasta_files = []
@@ -299,7 +353,7 @@ def main():
 
         # sample the reads
         try:
-            num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir)
+            num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir, strategy)
         except KeyError: 
             print("genomic region not found in one of the genomes selected: ", genomic_region, " continuing to next iteration")
             num_samples = 0

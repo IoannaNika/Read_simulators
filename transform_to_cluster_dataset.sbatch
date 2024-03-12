@@ -10,4 +10,4 @@
 #SBATCH --gres=gpu:0 
 
 # python transform_to_cluster_dataset.py --tsv data/2022_val_dataset/samples.tsv --out  data/2022_val_dataset/single_samples.tsv
-python transform_to_cluster_dataset.py --tsv data/test_datasets/sars_cov2_BA.2/dataset/samples.tsv --out data/test_datasets/sars_cov2_BA.2/dataset/single_samples.tsv
+python transform_to_cluster_dataset.py --tsv data/HCV-1b-NCBI/subselection_95/dataset/samples.tsv --out data/HCV-1b-NCBI/subselection_95/dataset/single_samples.tsv

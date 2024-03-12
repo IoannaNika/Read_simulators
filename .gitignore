@@ -4,3 +4,6 @@ data/*
 
 *.RData
 *.Rhistory
+
+hcov_ONT_dataset/*
+simulate_with_coverage_and_abundance.py
