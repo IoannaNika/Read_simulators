@@ -36,7 +36,7 @@ def get_primer_sequences(primer_file, index):
     return Fprob, Rprob
 
 
-def create_template(seq_path, id, template, primer_file):
+def create_template(seq_path, id, template, primer_file, cnt_templates):
     template_df = pd.read_csv(template, sep='\t', header=None)
     template_df.columns = ["chr", "start", "end", "name_1", "name_2", "strand"]
     final_template = "" 
@@ -68,7 +68,7 @@ def create_template(seq_path, id, template, primer_file):
         
         amplicon = seq[start:end]
 
-        while cnt < 10:
+        while cnt < cnt_templates:
             final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
             final_template += str(amplicon) + "\n"
             cnt += 1
@@ -82,38 +82,52 @@ def main():
     parser.add_argument('--dir', dest = 'dir', required=True, type=str, help="path to data directory")
     parser.add_argument('--bed_file', dest = 'bed_file', required=False, default="data/nCoV-2019.bed", type=str, help="path to bed file with primer locations")
     parser.add_argument('--primer_file', dest = 'primer_file', required=False, default="data/nCoV-2019.tsv",type=str, help="path to primer file")
-
+    parser.add_argument('--seq_id', dest = 'seq_id', required=False, default=None, type=str, help="create template for specific sequence")
+    parser.add_argument('--cnt_templates', dest = 'cnt_templates',  required=False, default=10, type=int, help="number of templates to create per sequence")
     args = parser.parse_args()
 
     # get directories in data directory
     data_dir = args.dir
 
-    # get all directories in data directory
-    dirs = [x[0] for x in os.walk(data_dir)]
-    
-    if data_dir in dirs:
-        dirs.remove(data_dir)
-    
-    # for each directory, get all fasta files
-    for directory in dirs:
-        # get all fasta files in directory
-        files = os.listdir(directory)
-        # take only fasta files
-        files = [file for file in files if file.endswith(".fasta")]
+    if args.seq_id == None
+        # get all directories in data directory
+        dirs = [x[0] for x in os.walk(data_dir)]
         
-        for file in files:
-            file_path = directory + "/" + file
-            gisaid_id = file.split(".")[0]
+        if data_dir in dirs:
+            dirs.remove(data_dir)
+        
+        # for each directory, get all fasta files
+        for directory in dirs:
+            # get all fasta files in directory
+            files = os.listdir(directory)
+            # take only fasta files
+            files = [file for file in files if file.endswith(".fasta")]
             
-            seq_path = directory + "/" + gisaid_id + ".fasta"
-           
+            for file in files:
+                file_path = directory + "/" + file
+                gisaid_id = file.split(".")[0]
+                
+                seq_path = directory + "/" + gisaid_id + ".fasta"
+            
 
-            template = create_template(seq_path, gisaid_id, args.bed_file, args.primer_file)
+                template = create_template(seq_path, gisaid_id, args.bed_file, args.primer_file)
+                # write template to file
+                template_file = directory + "/" + gisaid_id + ".template"
+
+                with open(template_file, "w") as out_file:
+                    out_file.write(template)
+        else: 
+            
+            seq_path = args.dir + "/" + args.seq_id + ".fasta"
+                template = create_template(seq_path, gisaid_id, args.bed_file, args.primer_file args.cnt_templates)
             # write template to file
-            template_file = directory + "/" + gisaid_id + ".template"
-
+            template_file = args.dir + "/" + args.seq_id + ".template"
+            # if template file already exists, remove it
+            if os.path.exists(template_file):
+                os.remove(template_file)
             with open(template_file, "w") as out_file:
-                out_file.write(template)
+                out_file.write(template)    
+
 
 
     
