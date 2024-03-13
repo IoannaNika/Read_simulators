@@ -54,6 +54,7 @@ def create_template(seq_path, id, template, n_templates):
             try: 
                 parent_dir = "/".join(seq_path.split("/")[: -2])
                 amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, id)], shell=True, capture_output=True, text=True)
+                amplicon = amplicon.stdout
                 while cnt < n_templates:
                     final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
                     final_template += str(amplicon) + "\n"
