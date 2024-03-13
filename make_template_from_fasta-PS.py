@@ -5,6 +5,7 @@ import os
 import sys
 import argparse
 from Bio import SeqIO
+
 import subprocess
 def parse_R_output(output):
     # parse output from R script
@@ -48,7 +49,21 @@ def create_template(seq_path, id, template, n_templates):
 
         except:
             print("Something went wrong with the amplicon positions.")
-            continue
+            print("Will get amplicon with MSAs instead")
+            # get amplicon with MSAs
+            try: 
+                parent_dir = "/".join(seq_path.split("/")[: -2])
+                amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, id)], shell=True, capture_output=True, text=True)
+                while cnt < n_templates:
+                    final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+                    final_template += str(amplicon) + "\n"
+                    cnt += 1
+                continue
+            
+            except:
+                print("Something went wrong with the MSAs.")
+                print("Skipping amplicon {}, {} for sequence {}".format(seq_start, seq_end, id))
+                continue
 
         # parse the fasta file
         record = SeqIO.parse(seq_path, "fasta")
@@ -71,8 +86,6 @@ def main():
     parser.add_argument('--cnt_templates', dest = 'cnt_templates',  required=False, default=10, type=int, help="number of templates to create per sequence")
     args = parser.parse_args()
 
-
-    
     # get directories in data directory
     data_dir = args.dir
 
