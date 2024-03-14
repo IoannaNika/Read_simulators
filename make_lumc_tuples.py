@@ -4,22 +4,69 @@ import pandas as pd
 import editdistance
 import numpy as np
 
+def make_all_tuples(tsv1, tsv2, outfile, genomic_regions):
+    # if outfile exists, delete it
+    if os.path.exists(outfile):
+        os.remove(outfile)
+    # create it again
+    open(outfile, 'x').close()
+
+    # write header for the tsv file
+    with open(outfile, "a") as f:
+        f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+        f.close()
+
+    for region in genomic_regions:
+        start = region[0]
+        end = region[1]
+    
+        # get all reads that span the region
+        reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
+        reads_tsv2 = tsv2[(tsv2["start"] == start) & (tsv2["end"] == end)]
+
+        # sample negative samples
+        for i, read_1 in reads_tsv1.iterrows():
+            read1 = read_1[1]
+            # get all reads that span the region
+            for j, read_2 in reads_tsv2.iterrows():
+                read2 = read_2[1]
+                ed = editdistance.eval(read1["read"], read2["read"])
+
+                with open(outfile, "a") as f:
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read1["id"], read1["read"], read2["id"], read2["read"], start, end, ed))
+                    f.close()
+
+        # sample positive samples
+        for index, read_1 in reads_tsv1.iterrows():
+            read1 = read_1[1]
+            #  iterate over the succesive rows of the same dataframe to make all possible pairs
+            for jindex, read_1_next in reads_tsv1.iterrows():
+                if jindex <= index:
+                    continue
+
+                read1_next = read_1_next[1]
+
+                ed = editdistance.eval(read1["read"], read1_next["read"])
+
+                with open(outfile, "a") as f:
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read1["id"], read1["read"], read1_next["id"], read1_next["read"], start, end, ed))
+                    f.close()
+
+        for index, read_2 in reads_tsv2.itterows(): 
+            read2 = read_2[1]
+            for jindex, read_2_next in reads_tsv2.iterrows():
+                if jindex <= index:
+                    continue
+                read2_next = read_2_next[1]
+                ed = editdistance.eval(read2["read"], read2_next["read"])
+
+                with open(outfile, "a") as f:
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read2["id"], read2["read"], read2_next["id"], read2_next["read"], start, end, ed))
+                    f.close()
+    return
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Map LUMC regions")
-    parser.add_argument('--tsv1', dest = 'tsv1', required=True, type=str, help="")
-    parser.add_argument('--tsv2', dest = 'tsv2', required=True, type=str, help="")
-    parser.add_argument("--n", dest="n", required=True, type=int, help="")
-    parser.add_argument('--out', dest = 'out', required=True, type=str, help="")
-    parser.add_argument('--singles', dest = 'singles', required=True, default=False, type=bool, help="")
-    args = parser.parse_args()
-
-    tsv1_file = args.tsv1
-    tsv2_file = args.tsv2
-    n = args.n
-    outfile = args.out
-    singles = args.singles
+def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
 
     # if outfile exists, delete it
     if os.path.exists(outfile):
@@ -33,30 +80,11 @@ def main():
         else: 
             f.write("id\tread\tgenomic_regions\tfile\n")
 
-    # Read in the tsv files
-    tsv1 = pd.read_csv(tsv1_file, sep="\t")
-    tsv1.columns = ["id", "read", "start", "end", "strand"]
-    tsv2 = pd.read_csv(tsv2_file, sep="\t")
-    tsv2.columns = ["id", "read", "start", "end", "strand"]
-
-    # sample positive and negative tuples from the same regions
-
-    genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
-                       (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
-                        (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
-                         (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
-                        (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
-                         (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
-                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
-
     count = 0
     strand = ["+", "-"]
     tsvs = [tsv1, tsv2]
 
-    while count < n:
-
-        # from each tsv file find reads that span the same region and are on the same strand
-        
+    while count < n:        
         # sample uniformly from the genomic regions
         region = genomic_regions[np.random.randint(len(genomic_regions))]
         start = region[0]
@@ -126,6 +154,48 @@ def main():
                     f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), 1-indx))
 
             count += 1
+    return
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Make tuples for LUMC dataset")
+    parser.add_argument('--tsv1', dest = 'tsv1', required=True, type=str, help="tsv file with reads from the first dataset")
+    parser.add_argument('--tsv2', dest = 'tsv2', required=True, type=str, help="tsv file with reads from the second dataset")
+    parser.add_argument("--n", dest="n", required=True, type=int, help="number of tuples to create")
+    parser.add_argument("--all", dest="all", required=True, type=bool, help="True, if all tuples should be created, False, is only the specified number of tuples should be created")
+    parser.add_argument('--out', dest = 'out', required=True, type=str, help="output file")
+    parser.add_argument('--singles', dest = 'singles', required=True, default=False, type=bool, help="True, if only singles should be created, False, if tuples should be created")
+    args = parser.parse_args()
+
+    tsv1_file = args.tsv1
+    tsv2_file = args.tsv2
+    n = args.n
+    outfile = args.out
+    singles = args.singles
+
+    # Read in the tsv files
+    tsv1 = pd.read_csv(tsv1_file, sep="\t")
+    tsv1.columns = ["id", "read", "start", "end", "strand"]
+    tsv2 = pd.read_csv(tsv2_file, sep="\t")
+    tsv2.columns = ["id", "read", "start", "end", "strand"]
+
+    # sample positive and negative tuples from the same regions
+
+    genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
+                       (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
+                        (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
+                         (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
+                        (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
+                         (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
+                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
+    
+    if args.all == False:
+        make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions)
+
+    else:
+        make_all_tuples(tsv1, tsv2, outfile, genomic_regions)
+
+
 
 if __name__ == "__main__":
     main()
