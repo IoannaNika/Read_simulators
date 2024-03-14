@@ -5,23 +5,21 @@ from Bio import SeqIO
 import pandas as pd
 
 
-def mafft_msa(dir): 
-    if os.path.exists("{}/msa_alignment.fasta".format(dir)):
+def mafft_msa(directory): 
+    if os.path.exists("{}/msa_alignment.fasta".format(directory)):
         return
-    os.system("mafft --auto --quiet --thread 4 {}/sequences.fasta > {}/msa_alignment.fasta".format(dir, dir))
+    os.system("mafft --auto --quiet --thread 4 {}/sequences.fasta > {}/msa_alignment.fasta".format(directory, directory))
     return 
 
 
-def find_amplicons(dir ,primers, start, end, record_id):
+def find_amplicons(directory, start, end, record_id):
 
-    msa_alignment = "{}/msa_alignment.fasta".format(dir)
+    msa_alignment = "{}/msa_alignment.fasta".format(directory)
     fasta_sequences = SeqIO.parse(open(msa_alignment),'fasta')
-
-    # primer_locations = parse_primer_file(primers)
     
     for record in fasta_sequences:
         if record.id == record_id:
-            if start > len(record.seq) or end > len(record.seq):
+            if start >= len(record.seq) or end >= len(record.seq):
                 raise ValueError("Start or end is out of range, skipping")
             amplicon = record.seq[start:end]
             return amplicon
@@ -37,17 +35,17 @@ def main():
     parser.add_argument('--record_id', dest = 'record_id', required=True, type=str, help="record id of sequence to be used for amplicon detection")
     args = parser.parse_args()
 
-    dir = args.dir
+    directory = args.dir
     start = args.start
     end = args.end
     record_id = args.record_id
 
 
-    mafft_msa(dir)
+    mafft_msa(directory)
 
-    amplicon = find_amplicons(dir, start, end, record_id)
+    amplicon = find_amplicons(directory, start, end, record_id)
     # remove any gaps
-    amplicon = amplicon.replace("-", "").strip()
+    amplicon = amplicon.replace("-", "").strip().upper()
 
     print(amplicon)
 

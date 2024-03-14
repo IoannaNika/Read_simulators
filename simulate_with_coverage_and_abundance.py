@@ -63,12 +63,14 @@ def main():
             create_template(data_dir, s_id, n_reads, bed_file)
         else:
             create_template_with_pf(data_dir, s_id, n_reads, bed_file, primer_file)
+        
 
         if strategy == "pacbio-hifi":
             simulate_hifi_reads(data_dir, s_id, cores)
             
         if strategy == "ONT-HQ": 
             simulate_ONT_HQ_reads(data_dir, s_id)
+        
     
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ def get_amplicon_positions(Fprob, Rprob, seq_path):
     end = int(results[1]) - len(Rprob)
     return start, end
 
-def create_template(seq_path, id, template, n_templates):
+def create_template(seq_path, s_id, template, n_templates):
     template_df = pd.read_csv(template, sep='\t', header=None)
     template_df.columns = ["chr", "start", "end", "name_1", "score", "strand", "primer"]
     final_template = "" 
@@ -53,17 +53,18 @@ def create_template(seq_path, id, template, n_templates):
             # get amplicon with MSAs
             try: 
                 parent_dir = "/".join(seq_path.split("/")[: -2])
-                amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, id)], shell=True, capture_output=True, text=True)
+                amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, s_id)], shell=True, capture_output=True, text=True)
+                print("Amplicon: ", amplicon)
                 amplicon = amplicon.stdout
                 while cnt < n_templates:
-                    final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
-                    final_template += str(amplicon) + "\n"
+                    final_template += ">" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+                    final_template += str(amplicon).strip() + "\n"
                     cnt += 1
                 continue
             
             except:
                 print("Something went wrong with the MSAs.")
-                print("Skipping amplicon {}, {} for sequence {}".format(seq_start, seq_end, id))
+                print("Skipping amplicon {}, {} for sequence {}".format(seq_start, seq_end, s_id))
                 continue
 
         # parse the fasta file
@@ -73,7 +74,7 @@ def create_template(seq_path, id, template, n_templates):
         amplicon = seq[start:end]
 
         while cnt < n_templates:
-            final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+            final_template += ">" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
             final_template += str(amplicon) + "\n"
             cnt += 1
 
