@@ -13,8 +13,15 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
 
     # write header for the tsv file
     with open(outfile, "a") as f:
-        f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+        f.write("label\tid1\tid2\\tstart\tend\tedit_distance\n")
         f.close()
+    
+    # make a /reads folder 
+    reads_path = outfile.split("/")[:-1]
+    reads_path = "/".join(reads_path) + "/reads"
+    if not os.path.exists(reads_path):
+        os.makedirs(reads_path)
+    
 
     for region in genomic_regions:
         start = region[0]
@@ -33,8 +40,16 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
                 ed = editdistance.eval(read1["read"], read2["read"])
 
                 with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("NA", read1["id"], read1["read"], read2["id"], read2["read"], start, end, ed))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("NA", read1["id"].replace("/", "_"), read2["id"].replace("/", "_"), start, end, ed))
                     f.close()
+
+                # write reads to the /reads folder
+                # if it exists, dont write it again
+                if not os.path.exists(reads_path + "/" + read1["id"].replace("/", "_") + ".fasta"):
+                    with open(reads_path + "/" + read1["id"] + ".fasta", "w") as f:
+                        f.write(">{}\n".format(read1["id"]).replace("/", "_"))
+                        f.write(read1["read"])
+                        f.close()
     return
 
 
@@ -52,9 +67,15 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
     # create it again
     open(outfile, 'x').close()
 
+    # make a /reads folder
+    reads_path = outfile.split("/")[:-1]
+    reads_path = "/".join(reads_path) + "/reads"
+    if not os.path.exists(reads_path):
+        os.makedirs(reads_path)
+
     # write header for the tsv file
     with open(outfile, "a") as f:
-        f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+        f.write("label\tid1\tid2\tstart\tend\tedit_distance\n")
         f.close()
 
     for region in genomic_regions:
@@ -80,8 +101,17 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
                 ed = editdistance.eval(read1["read"], read2["read"])
 
                 with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", tsv1_file_prefix + "_" + read1["id"], read1["read"], tsv2_file_prefix + "_" + read2["id"], read2["read"], start, end, ed))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", tsv1_file_prefix + "_" + read1["id"], tsv2_file_prefix + "_" + read2["id"], start, end, ed))
                     f.close()
+
+                # write reads to the /reads folder
+                # if it exists, dont write it again
+                
+                if not os.path.exists(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
+                    with open(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
+                        f.write(">{}\n".format(tsv1_file_prefix + "_" + read1["id"]).replace("/", "_"))
+                        f.write(read1["read"])
+                        f.close()
 
         # sample positive samples
         for index, read1 in reads_tsv1.iterrows():
@@ -96,8 +126,17 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
                 ed = editdistance.eval(read1["read"], read1_next["read"])
 
                 with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv1_file_prefix + "_" + read1["id"], read1["read"], tsv1_file_prefix + "_" + read1_next["id"], read1_next["read"], start, end, ed))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv1_file_prefix + "_" + read1["id"], tsv1_file_prefix + "_" + read1_next["id"], start, end, ed))
                     f.close()
+
+                # write reads to the /reads folder
+                # if it exists, dont write it again
+                    
+                if not os.path.exists(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
+                    with open(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
+                        f.write(">{}\n".format(tsv1_file_prefix + "_" + read1["id"]).replace("/", "_"))
+                        f.write(read1["read"])
+                        f.close()
 
         for index, read2 in reads_tsv2.iterrows(): 
             for jindex, read2_next in reads_tsv2.iterrows():
@@ -110,8 +149,17 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
                 ed = editdistance.eval(read2["read"], read2_next["read"])
 
                 with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv2_file_prefix + "_" + read2["id"], read2["read"], tsv2_file_prefix + "_" + read2_next["id"], read2_next["read"], start, end, ed))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv2_file_prefix + "_" + read2["id"], tsv2_file_prefix + "_" + read2_next["id"], start, end, ed))
                     f.close()
+                
+                # write reads to the /reads folder
+                # if it exists, dont write it again
+                
+                if not os.path.exists(reads_path + "/" + tsv2_file_prefix + "_" + read2["id"].replace("/", "_") + ".fasta"):
+                    with open(reads_path + "/" + tsv2_file_prefix + "_" + read2["id"].replace("/", "_") + ".fasta", "w") as f:
+                        f.write(">{}\n".format(tsv2_file_prefix + "_" + read2["id"]).replace("/", "_"))
+                        f.write(read2["read"])
+                        f.close()
     return
 
 
@@ -211,8 +259,7 @@ def main():
     parser.add_argument('--tsv1', dest = 'tsv1', required=True, type=str, help="tsv file with reads from the first dataset")
     parser.add_argument('--tsv2', dest = 'tsv2', required=False, default=None, type=str, help="tsv file with reads from the second dataset")
     parser.add_argument("--n", dest="n", required=False, default=1000, type=int, help="number of tuples to create")
-    parser.add_argument("--all", dest="all", required=False, default=False, type=bool, help="True, if all tuples should be created, False, is only the specified number of tuples should be created")
-    parser.add_argument('--out', dest = 'out', required=True, type=str, help="output file")
+    parser.add_argument("--all", dest="all", required=False, default=False, type=bool, help="True, if all tuples should be created, False, is only the specified number of tuples should be created, when one tsv file is provided, pairs within the same tsv file will be created")
     parser.add_argument('--singles', dest = 'singles', required=False, default=False, type=bool, help="True, if only singles should be created, False, if tuples should be created")
     parser.add_argument('--with_prefix', dest ='with_prefix', required=False, default=False, type=bool, help="include file prefix in read ids e.g. Wuhan/tsv_file_1.tsv, Wuhan will be used as prefix for the read ids to differentiate their origin, implemented only for the --all option")
     args = parser.parse_args()
