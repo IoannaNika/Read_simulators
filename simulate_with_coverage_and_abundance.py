@@ -54,7 +54,7 @@ def main():
     
     for s_id in ids_and_abundances.keys():
         abundance = ids_and_abundances[s_id]
-        ab_fraction = abundance / 100
+        ab_fraction = abundance #/ 100
         n_reads = int(ab_fraction * coverage)
 
         out_file.write(s_id + "\t" + str(n_reads) + "\n")

@@ -10,5 +10,7 @@
 #SBATCH --gres=gpu:0 
 
 
-python make_test_pairs.py --reads Experiments_data/HCV-1b/cov_100x_mixture_pb_hifi/dataset/all_reads.tsv --output Experiments_data/HCV-1b/cov_100x_mixture_pb_hifi/dataset/all_test_pairs.tsv
+# python make_test_pairs.py --reads Experiments_data/HCV-1b/cov_100x_mixture_pb_hifi/dataset/all_reads.tsv --output Experiments_data/HCV-1b/cov_100x_mixture_pb_hifi/dataset/all_test_pairs.tsv
+
+python make_test_pairs.py --reads data/cerbaresearch/Pacbio-nsp12-fragment/grouped_reads.tsv --output Experiments_data/cerbaresearch/Pacbio-nsp12-fragment/1005/dataset/all_test_pairs.tsv
 

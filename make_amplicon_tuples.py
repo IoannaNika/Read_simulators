@@ -229,11 +229,15 @@ def sample(genomic_region, sample1, sample2, outdir, strategy):
 
     # get positive pair
     (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
-
+    
+    patience = 0
     # check if the positive pair is already in the tsv file
     while check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir):
         # resampling positive pair
         (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
+        patience +=1
+        if patience >= 10 and check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir): 
+            return 0
       
     # get negative pair for the anchor read
     (read_negative_sid, read_negative), ed_neg = sample_negative_pair(read_anchor, maf_dict_2, reads_2, gr_key)
