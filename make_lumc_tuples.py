@@ -17,12 +17,17 @@ def per_region_tuples(tsv1, outfile, region, reads_path):
     for i, read1 in reads_tsv1.iterrows():
         # get all reads that span the region
         for j, read2 in reads_tsv1.iterrows():
-            # if they are in different strands, continue
-            if read1["strand"] != read2["strand"]:
-                continue
 
             if j <= i: 
                 continue
+            # if they are in different strands, continue
+            if read1["strand"] != read2["strand"]:
+                # find the reverse complement of the read that is in the negative strand
+                if read1["strand"] == "+":
+                    read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+                else:
+                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+
 
             ed = editdistance.eval(read1["read"], read2["read"])
 
