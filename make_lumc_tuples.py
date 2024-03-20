@@ -167,6 +167,10 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
     open(outfile, 'x').close()
 
     # make a /reads folder
+    # if it exists delete it and its contents
+    if os.path.exists(outfile.split("/")[:-1] + "/reads"):
+        os.system("rm -r " + outfile.split("/")[:-1] + "/reads")
+
     reads_path = outfile.split("/")[:-1]
     reads_path = "/".join(reads_path) + "/reads"
     if not os.path.exists(reads_path):
