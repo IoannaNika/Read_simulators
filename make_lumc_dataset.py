@@ -88,7 +88,7 @@ def main():
         start, end = map_to_correct_region(start, end)
         # write to tsv file
         with open(outfile, "a") as f:
-            f.write(read_name + "\t" + reads[read_name] + "\t" + str(start) + "_" + str(end) + "\t" + strand +"\n")
+            f.write(read_name + "\t" + reads[read_name] + "\t" + str(start) + "\t" + str(end) + "\t" + strand +"\n")
     
                
 if __name__ == "__main__":

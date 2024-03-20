@@ -12,7 +12,10 @@ def find_identifier_NCBI(file):
 def make_output_file(output):
     if os.path.exists(output):
         os.remove(output)
-        # create new file
+        
+    # create new file
+    f = open(output, "x").close()  
+
     with open(output, "w") as f:
         f.write("read_id\tgenomic_region\tlabel\n")
 
