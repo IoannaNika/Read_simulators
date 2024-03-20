@@ -3,6 +3,42 @@ import os
 import pandas as pd
 import editdistance
 import numpy as np
+from multiprocessing import Process
+
+def per_region_tuples(tsv1, outfile, region, reads_path):
+
+
+    start = region[0]
+    end = region[1]
+
+    reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
+
+    # sample negative samples
+    for i, read1 in reads_tsv1.iterrows():
+        # get all reads that span the region
+        for j, read2 in reads_tsv1.iterrows():
+            # if they are in different strands, continue
+            if read1["strand"] != read2["strand"]:
+                continue
+
+            if j <= i: 
+                continue
+
+            ed = editdistance.eval(read1["read"], read2["read"])
+
+            with open(outfile, "a") as f:
+                f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("NA", read1["id"].replace("/", "_"), read2["id"].replace("/", "_"), start, end, ed))
+                f.close()
+
+            # write reads to the /reads folder
+            # if it exists, dont write it again
+            if not os.path.exists(reads_path + "/" + read1["id"].replace("/", "_") + ".fasta"):
+                with open(reads_path + "/" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
+                    f.write(">{}\n".format(read1["id"]).replace("/", "_"))
+                    f.write(read1["read"])
+                    f.close()
+    
+    return 
 
 def make_all_tuples_no_gt(tsv1, outfile, genomic_regions): 
     # if outfile exists, delete it
@@ -19,40 +55,23 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
     # make a /reads folder 
     reads_path = outfile.split("/")[:-1]
     reads_path = "/".join(reads_path) + "/reads"
+    # if it exists delete it and its contents
+    if os.path.exists(reads_path):
+        os.system("rm -r " + reads_path)
+
     if not os.path.exists(reads_path):
         os.makedirs(reads_path)
     
 
-    for region in genomic_regions:
-        start = region[0]
-        end = region[1]
+    processes = [Process(target=per_region_tuples, args=(tsv1, outfile, region, reads_path)) for region in genomic_regions]
 
-        reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
-
-        # sample negative samples
-        for i, read1 in reads_tsv1.iterrows():
-            # get all reads that span the region
-            for j, read2 in reads_tsv1.iterrows():
-                # if they are in different strands, continue
-                if read1["strand"] != read2["strand"]:
-                    continue
-
-                if j <= i: 
-                    continue
-
-                ed = editdistance.eval(read1["read"], read2["read"])
-
-                with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("NA", read1["id"].replace("/", "_"), read2["id"].replace("/", "_"), start, end, ed))
-                    f.close()
-
-                # write reads to the /reads folder
-                # if it exists, dont write it again
-                if not os.path.exists(reads_path + "/" + read1["id"].replace("/", "_") + ".fasta"):
-                    with open(reads_path + "/" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
-                        f.write(">{}\n".format(read1["id"]).replace("/", "_"))
-                        f.write(read1["read"])
-                        f.close()
+    
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join()
+        
+    
     return
 
 
