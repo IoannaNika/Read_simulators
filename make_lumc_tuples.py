@@ -5,7 +5,7 @@ import editdistance
 import numpy as np
 from multiprocessing import Process
 
-def per_region_tuples(tsv1, outfile, region, reads_path):
+def per_region_tuples_no_gt(tsv1, outfile, region, reads_path):
 
 
     start = region[0]
@@ -20,6 +20,7 @@ def per_region_tuples(tsv1, outfile, region, reads_path):
 
             if j <= i: 
                 continue
+
             # if they are in different strands, continue
             if read1["strand"] != read2["strand"]:
                 # find the reverse complement of the read that is in the negative strand
@@ -68,7 +69,7 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
         os.makedirs(reads_path)
     
 
-    processes = [Process(target=per_region_tuples, args=(tsv1, outfile, region, reads_path)) for region in genomic_regions]
+    processes = [Process(target=per_region_tuples_no_gt, args=(tsv1, outfile, region, reads_path)) for region in genomic_regions]
 
     
     for process in processes:
@@ -81,8 +82,79 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
 
 
                 
+def per_region_tuples_negatives(tsv1, tsv2, outfile, region, reads_path, tsv1_file_prefix, tsv2_file_prefix):
+    start = region[0]
+    end = region[1]
+    
+    # get all reads that span the region
+    reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
+    reads_tsv2 = tsv2[(tsv2["start"] == start) & (tsv2["end"] == end)]
+    
+    # sample negative samples
+    for i, read1 in reads_tsv1.iterrows():
+        # get all reads that span the region
+        for j, read2 in reads_tsv2.iterrows():
+            # if they are in different strands, continue
+            if read1["strand"] != read2["strand"]:
+                # find the reverse complement
+                if read1["strand"] == "+": 
+                    read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+                else:
+                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+
+            ed = editdistance.eval(read1["read"], read2["read"])
+
+            with open(outfile, "a") as f:
+                f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", tsv1_file_prefix + "_" + read1["id"].replace("/", "_"), tsv2_file_prefix + "_" + read2["id"].replace("/", "_"), start, end, ed))
+                f.close()
+
+            # write reads to the /reads folder
+            # if it exists, dont write it again
+            if not os.path.exists(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
+                with open(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
+                    f.write(">{}\n".format(tsv1_file_prefix + "_" + read1["id"]).replace("/", "_"))
+                    f.write(read1["read"])
+                    f.close()
+    return
 
 
+def make_region_tuples_positives(tsv, outfile, region, reads_path, tsv_file_prefix): 
+    start = region[0]
+    end = region[1]
+    
+    # get all reads that span the region
+    reads_tsv = tsv[(tsv["start"] == start) & (tsv["end"] == end)]
+
+    # sample positive samples
+    for index, read1 in reads_tsv.iterrows():
+        #  iterate over the succesive rows of the same dataframe to make all possible pairs
+        for jindex, read1_next in reads_tsv.iterrows():
+            if jindex <= index:
+                continue
+            # if they are in different strands, continue
+            if read1["strand"] != read1_next["strand"]:
+                # find the reverse complement
+                if read1["strand"] == "+":
+                    read1_next["read"] = read1_next["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+                else:
+                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+
+            ed = editdistance.eval(read1["read"], read1_next["read"])
+
+            with open(outfile, "a") as f:
+                f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv_file_prefix + "_" + read1["id"].replace("/", "_"), tsv_file_prefix + "_" + read1_next["id"].replace("/", "_"), start, end, ed))
+                f.close()
+
+            # write reads to the /reads folder
+            # if it exists, dont write it again 
+            if not os.path.exists(reads_path + "/" + tsv_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
+                with open(reads_path + "/" + tsv_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
+                    f.write(">{}\n".format(tsv_file_prefix + "_" + read1["id"]).replace("/", "_"))
+                    f.write(read1["read"])
+                    f.close()
+
+
+    return
 
 
 
@@ -105,88 +177,27 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
         f.write("label\tid1\tid2\tstart\tend\tedit_distance\n")
         f.close()
 
-    for region in genomic_regions:
-        start = region[0]
-        end = region[1]
+    processes = [Process(target=per_region_tuples_negatives, args=(tsv1, tsv2, outfile, region, reads_path, tsv1_file_prefix, tsv2_file_prefix)) for region in genomic_regions]
+
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join()
+
+    processes = [Process(target=make_region_tuples_positives, args=(tsv1, outfile, region, reads_path, tsv1_file_prefix)) for region in genomic_regions]
+
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join()
     
-        # get all reads that span the region
-        reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
-        reads_tsv2 = tsv2[(tsv2["start"] == start) & (tsv2["end"] == end)]
+    processes = [Process(target=make_region_tuples_positives, args=(tsv2, outfile, region, reads_path, tsv2_file_prefix)) for region in genomic_regions]
 
-        print("Region: ", start, end)
-        print("Reads tsv1: ", reads_tsv1.shape[0])
-        print("Reads tsv2: ", reads_tsv2.shape[0])
-        
-        # sample negative samples
-        for i, read1 in reads_tsv1.iterrows():
-            # get all reads that span the region
-            for j, read2 in reads_tsv2.iterrows():
-                # if they are in different strands, continue
-                if read1["strand"] != read2["strand"]:
-                    continue
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join()
 
-                ed = editdistance.eval(read1["read"], read2["read"])
-
-                with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", tsv1_file_prefix + "_" + read1["id"].replace("/", "_"), tsv2_file_prefix + "_" + read2["id"].replace("/", "_"), start, end, ed))
-                    f.close()
-
-                # write reads to the /reads folder
-                # if it exists, dont write it again
-                
-                if not os.path.exists(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
-                    with open(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
-                        f.write(">{}\n".format(tsv1_file_prefix + "_" + read1["id"]).replace("/", "_"))
-                        f.write(read1["read"])
-                        f.close()
-
-        # sample positive samples
-        for index, read1 in reads_tsv1.iterrows():
-            #  iterate over the succesive rows of the same dataframe to make all possible pairs
-            for jindex, read1_next in reads_tsv1.iterrows():
-                if jindex <= index:
-                    continue
-                # if they are in different strands, continue
-                if read1["strand"] != read1_next["strand"]:
-                    continue
-
-                ed = editdistance.eval(read1["read"], read1_next["read"])
-
-                with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv1_file_prefix + "_" + read1["id"].replace("/", "_"), tsv1_file_prefix + "_" + read1_next["id"].replace("/", "_"), start, end, ed))
-                    f.close()
-
-                # write reads to the /reads folder
-                # if it exists, dont write it again
-                    
-                if not os.path.exists(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta"):
-                    with open(reads_path + "/" + tsv1_file_prefix + "_" + read1["id"].replace("/", "_") + ".fasta", "w") as f:
-                        f.write(">{}\n".format(tsv1_file_prefix + "_" + read1["id"]).replace("/", "_"))
-                        f.write(read1["read"])
-                        f.close()
-
-        for index, read2 in reads_tsv2.iterrows(): 
-            for jindex, read2_next in reads_tsv2.iterrows():
-                if jindex <= index:
-                    continue
-                # if they are in different strands, continue
-                if read2["strand"] != read2_next["strand"]:
-                    continue
-
-                ed = editdistance.eval(read2["read"], read2_next["read"])
-
-                with open(outfile, "a") as f:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv2_file_prefix + "_" + read2["id"].replace("/", "_"), tsv2_file_prefix + "_" + read2_next["id"].replace("/", "_"), start, end, ed))
-                    f.close()
-                
-                # write reads to the /reads folder
-                # if it exists, dont write it again
-                
-                if not os.path.exists(reads_path + "/" + tsv2_file_prefix + "_" + read2["id"].replace("/", "_") + ".fasta"):
-                    with open(reads_path + "/" + tsv2_file_prefix + "_" + read2["id"].replace("/", "_") + ".fasta", "w") as f:
-                        f.write(">{}\n".format(tsv2_file_prefix + "_" + read2["id"]).replace("/", "_"))
-                        f.write(read2["read"])
-                        f.close()
     return
 
 
