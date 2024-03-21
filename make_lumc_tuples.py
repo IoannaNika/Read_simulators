@@ -21,15 +21,11 @@ def per_region_tuples_no_gt(tsv1, outfile, region, reads_path):
             if j <= i: 
                 continue
 
-            # if they are in different strands, continue
-            if read1["strand"] != read2["strand"]:
-                # find the reverse complement of the read that is in the negative strand
-                if read1["strand"] == "+":
-                    read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-                else:
-                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-
-
+            if read1["strand"] == "-":
+                read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+            if read2["strand"] == "-":
+                read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+                
             ed = editdistance.eval(read1["read"], read2["read"])
 
             with open(outfile, "a") as f:
@@ -94,14 +90,12 @@ def per_region_tuples_negatives(tsv1, tsv2, outfile, region, reads_path, tsv1_fi
     for i, read1 in reads_tsv1.iterrows():
         # get all reads that span the region
         for j, read2 in reads_tsv2.iterrows():
-            # if they are in different strands, continue
-            if read1["strand"] != read2["strand"]:
-                # find the reverse complement
-                if read1["strand"] == "+": 
-                    read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-                else:
-                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-
+            
+            if read1["strand"] == "-":
+                read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+            if read2["strand"] == "-":
+                read2["read"] = read2["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+                
             ed = editdistance.eval(read1["read"], read2["read"])
 
             with open(outfile, "a") as f:
@@ -132,13 +126,9 @@ def make_region_tuples_positives(tsv, outfile, region, reads_path, tsv_file_pref
             if jindex <= index:
                 continue
             # if they are in different strands, continue
-            if read1["strand"] != read1_next["strand"]:
-                # find the reverse complement
-                if read1["strand"] == "+":
-                    read1_next["read"] = read1_next["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-                else:
-                    read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
-
+            if read1["strand"] == "-":
+                read1["read"] = read1["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
+          
             ed = editdistance.eval(read1["read"], read1_next["read"])
 
             with open(outfile, "a") as f:
@@ -152,8 +142,6 @@ def make_region_tuples_positives(tsv, outfile, region, reads_path, tsv_file_pref
                     f.write(">{}\n".format(tsv_file_prefix + "_" + read1["id"]).replace("/", "_"))
                     f.write(read1["read"])
                     f.close()
-
-
     return
 
 
@@ -166,13 +154,14 @@ def make_all_tuples(tsv1, tsv2, outfile, genomic_regions, with_prefix, tsv1_file
     # create it again
     open(outfile, 'x').close()
 
-    # make a /reads folder
-    # if it exists delete it and its contents
-    if os.path.exists(outfile.split("/")[:-1] + "/reads"):
-        os.system("rm -r " + outfile.split("/")[:-1] + "/reads")
+
 
     reads_path = outfile.split("/")[:-1]
     reads_path = "/".join(reads_path) + "/reads"
+    # if it exists delete it and its contents
+    if os.path.exists(reads_path):
+        os.system("rm -r " + reads_path)
+        
     if not os.path.exists(reads_path):
         os.makedirs(reads_path)
 
@@ -329,13 +318,18 @@ def main():
 
     # sample positive and negative tuples from the same regions
 
-    genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
-                       (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
-                        (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
-                         (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
-                        (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
-                         (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
-                          (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
+    # lumc 
+    # genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
+    #                    (5286, 6358), (6307, 7379), (7328, 8363), (8282, 9378), (9327, 10429),
+    #                     (10370, 11447), (11394, 12538), (12473, 13599), (13532, 14619),
+    #                      (14568, 15713), (15634, 16698), (16647, 17732), (17649, 18684),
+    #                     (18618, 19655), (19604, 20676), (20581, 21620), (21562, 22590),
+    #                      (22537, 23609), (23544, 24714), (24658, 25768), (25712, 26835),
+    #                       (26766, 27872), (27808, 28985), (28699, 29768), (29768, 29790)]
+
+    # cerbaresearch nsp12
+    genomic_regions = [(13055,13960), (13803, 14718), (14600, 15599), (15371, 16311)]
+
     
     if tsv2_file == None and args.all == True: 
         make_all_tuples_no_gt(tsv1, outfile, genomic_regions)

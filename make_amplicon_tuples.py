@@ -236,7 +236,7 @@ def sample(genomic_region, sample1, sample2, outdir, strategy):
         # resampling positive pair
         (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
         patience +=1
-        if patience >= 10 and check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir): 
+        if patience >= 2 and check_if_in_tsv(sample1[0], sample1[0], read_anchor_sid, read_pos_sid, outdir): 
             return 0
       
     # get negative pair for the anchor read
@@ -281,6 +281,7 @@ def main():
     parser.add_argument('--dir', dest = 'data_dir', required=True, type=str, help="data directory to sample from")
     parser.add_argument('--out', dest = 'out_dir', required=True, type=str, help="output directory to write samples to")
     parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=True, type=str, help="ONT or pacbio-hifi")    
+    parser.add_argument('--append_mode', dest ="append_mode", required=False, default=False, type=bool, help="to append to existing prediction file or to create a new one and delete an existing one")
     args = parser.parse_args()
 
     data_directory = args.data_dir
@@ -291,13 +292,15 @@ def main():
     # check if output directory exists
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
+
     else:
-       if len(os.listdir(out_dir)) > 0:
-           for file in os.listdir(out_dir):
-               # if its a directory, skip
-                if os.path.isdir(os.path.join(out_dir, file)):
-                    continue
-                os.remove(os.path.join(out_dir, file))
+        if args.append_mode == False:
+            if len(os.listdir(out_dir)) > 0:
+                for file in os.listdir(out_dir):
+                    # if its a directory, skip
+                        if os.path.isdir(os.path.join(out_dir, file)):
+                            continue
+                        os.remove(os.path.join(out_dir, file))
 
     # make tsv file to write the samples to
     tsv_file = os.path.join(out_dir, "samples.tsv")
@@ -306,20 +309,22 @@ def main():
         with open(tsv_file, "w") as f:
             f.write("read_1\tread_2\tlabel\tgenomic_region\tread_length_r1\tread_length_r2\tlineage_r1\tlineage_r2\tedit_distance\n")
     else:
-        # if it exist remove and create a new one
-        os.remove(tsv_file)
-        with open(tsv_file, "w") as f:
-            f.write("read_1\tread_2\tlabel\tgenomic_region\tread_length_r1\tread_length_r2\\tlineage_r1\tlineage_r2\ttedit_distance\n")
+        if args.append_mode == False:
+            # if it exist remove and create a new one
+            os.remove(tsv_file)
+            with open(tsv_file, "w") as f:
+                f.write("read_1\tread_2\tlabel\tgenomic_region\tread_length_r1\tread_length_r2\\tlineage_r1\tlineage_r2\ttedit_distance\n")
 
     # make a read directory if it doesn't exist
     read_dir = os.path.join(out_dir, "reads")
     if not os.path.exists(read_dir):
         os.makedirs(read_dir)
     else:
-        if len(os.listdir(read_dir)) > 0:
-            # make sure it's empty
-            for file in os.listdir(read_dir):
-                os.remove(os.path.join(read_dir, file))
+        if args.append_mode == False:
+            if len(os.listdir(read_dir)) > 0:
+                # make sure it's empty
+                for file in os.listdir(read_dir):
+                    os.remove(os.path.join(read_dir, file))
 
     # sars-cov-2
     genomic_regions = [(54, 1183), (1128, 2244), (2179, 3235), (3166, 4240), (4189, 5337),
