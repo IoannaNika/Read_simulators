@@ -29,7 +29,6 @@ def create_template(seq_path, s_id, template, n_templates):
 
     # read template file two lines at a time (positive & negative strand info)
     for i in range(0, len(template_df), 2):
-        cnt = 0
         # get positive strand info for reference genome
         pos_strand = template_df.iloc[i]
         # get negative strand info for reference genome
@@ -72,10 +71,16 @@ def create_template(seq_path, s_id, template, n_templates):
         seq = next(record).seq
         
         amplicon = seq[start:end]
-
-        while cnt < n_templates:
-            final_template += ">" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+        cnt = 0
+        while cnt < int(n_templates/2):
+            # write hald with + strand and half with - strand
+            final_template += ">" "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
             final_template += str(amplicon) + "\n"
+            cnt += 1
+        cnt = 0
+        while cnt < n_templates - int(n_templates/2):
+            final_template += ">" "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+            final_template += str(amplicon[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
             cnt += 1
 
     return final_template

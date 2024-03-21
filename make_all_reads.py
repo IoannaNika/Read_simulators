@@ -28,14 +28,16 @@ def parse_maf_file(maf_file):
     while cnt < len(lines):
         if lines[cnt].startswith("a"):
             next_line = lines[cnt+1].strip().split(" ")
+            # next line [1] -> +_OQ551954.1:140_1081:0
             genomic_region = next_line[1].split(":")[1]
+            strand = next_line[1].split(":")[0].split("_")[0]
             next_line = lines[cnt+2].strip().split(" ")
             sim_read_id = "/".join(next_line[1].split("/")[:-1])
             if genomic_region not in maf_dict.keys():
                 maf_dict[genomic_region] = set()
-                maf_dict[genomic_region].add(sim_read_id)
+                maf_dict[genomic_region].add((sim_read_id, strand))
             else:
-                maf_dict[genomic_region].add(sim_read_id)
+                maf_dict[genomic_region].add((sim_read_id, strand))
 
             cnt += 4
     return maf_dict
@@ -80,12 +82,16 @@ def write_sequence_to_file(full_read_id, sequence, outdir_read_dir):
 
 def write_all_reads(reads, maf_info, label, file, outdir_read_dir):
     for genomic_region in maf_info:
-        read_ids = maf_info[genomic_region]
-        for read_id in read_ids:
+        read_ids_and_strands = maf_info[genomic_region]
+
+        for (read_id, strand) in read_ids_and_strands:
             full_read_id = label + "_" + read_id.split("/")[0] + read_id.split("/")[1]
             if read_id in reads: 
                 sequence = reads[read_id]
-                read_sequence = reads[read_id]
+                
+                if strand == "-":
+                    sequence = sequence[::-1].translate(str.maketrans("ATGC", "TACG"))
+
                 write_read_entry_to_file(full_read_id, genomic_region, label, file)
                 write_sequence_to_file(full_read_id, sequence, outdir_read_dir)
 
