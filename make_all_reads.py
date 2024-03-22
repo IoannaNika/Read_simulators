@@ -14,7 +14,7 @@ def make_output_file(output):
         os.remove(output)
         
     # create new file
-    f = open(output, "x").close()  
+    open(output, "x").close()  
 
     with open(output, "w") as f:
         f.write("read_id\tgenomic_region\tlabel\n")
@@ -28,9 +28,9 @@ def parse_maf_file(maf_file):
     while cnt < len(lines):
         if lines[cnt].startswith("a"):
             next_line = lines[cnt+1].strip().split(" ")
-            # next line [1] -> +_OQ551954.1:140_1081:0
+            # next line [1] -> >+_OQ551954.1:140_1081:0
             genomic_region = next_line[1].split(":")[1]
-            strand = next_line[1].split(":")[0].split("_")[0]
+            strand = next_line[1].split(":")[0].split("_")[0][1:]
             next_line = lines[cnt+2].strip().split(" ")
             sim_read_id = "/".join(next_line[1].split("/")[:-1])
             if genomic_region not in maf_dict.keys():
@@ -75,6 +75,9 @@ def write_read_entry_to_file(read, genomic_region, label, file):
 
 def write_sequence_to_file(full_read_id, sequence, outdir_read_dir):
     # check if file exists
+    if os.path.exists(outdir_read_dir + "/" + full_read_id + ".fasta"):
+        os.remove(outdir_read_dir + "/" + full_read_id + ".fasta")
+
     if not os.path.exists(outdir_read_dir + "/" + full_read_id + ".fasta"):
         with open(outdir_read_dir + "/" + full_read_id + ".fasta", "w") as f:
             f.write(">" + full_read_id + "\n")

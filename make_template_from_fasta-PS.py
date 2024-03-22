@@ -54,14 +54,25 @@ def create_template(seq_path, s_id, template, n_templates):
                 parent_dir = "/".join(seq_path.split("/")[: -2])
                 amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, s_id)], shell=True, capture_output=True, text=True)
                 print("Amplicon: ", amplicon)
-                amplicon = amplicon.stdout
-                while cnt < n_templates:
-                    final_template += ">" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
-                    final_template += str(amplicon).strip() + "\n"
+                amplicon = str(amplicon.stdout).strip()
+                cnt = 0
+                while cnt < int(n_templates/2):
+                    # write hald with + strand and half with - strand
+                    final_template += ">" + "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+                    final_template += amplicon + "\n"
                     cnt += 1
+                leftover_templates = n_templates - int(n_templates/2)
+                cnt2 = 0
+                while cnt2 < leftover_templates:
+                    final_template += ">" + "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt+cnt2) + "\n"
+                    final_template += str(amplicon[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
+                    cnt2 += 1
+                
                 continue
             
-            except:
+            # print Exception
+            except Exception as e:
+                print(e)
                 print("Something went wrong with the MSAs.")
                 print("Skipping amplicon {}, {} for sequence {}".format(seq_start, seq_end, s_id))
                 continue
@@ -74,15 +85,17 @@ def create_template(seq_path, s_id, template, n_templates):
         cnt = 0
         while cnt < int(n_templates/2):
             # write hald with + strand and half with - strand
-            final_template += ">" "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+            final_template += ">" + "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
             final_template += str(amplicon) + "\n"
             cnt += 1
-        cnt = 0
-        while cnt < n_templates - int(n_templates/2):
-            final_template += ">" "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
-            final_template += str(amplicon[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
-            cnt += 1
+        leftover_templates = n_templates - int(n_templates/2)
+        cnt2 = 0
+        while cnt2 < leftover_templates:
+            final_template += ">" + "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt+cnt2) + "\n"
+            final_template += str(str(amplicon)[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
+            cnt2 += 1
 
+        print("Final template: ", final_template)
     return final_template
 
 def main():

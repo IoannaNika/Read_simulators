@@ -6,6 +6,48 @@ import random
 import editdistance
 import csv
 
+def parse_maf_file_ONT(maf_file):
+    maf_dict = {}
+    with open(maf_file, "r") as f:
+        lines = f.readlines()
+
+    cnt = 0
+    while cnt < len(lines):
+        if lines[cnt].startswith("a"):
+            next_line = lines[cnt+1].strip().split(" ")
+            genomic_region = next_line[1].split(":")[1]
+            next_line = lines[cnt+2].strip().split(" ")
+            sim_read_id = next_line[1].strip()
+            if genomic_region not in maf_dict.keys():
+                maf_dict[genomic_region] = set()
+                maf_dict[genomic_region].add(sim_read_id)
+            else:
+                maf_dict[genomic_region].add(sim_read_id)
+
+            cnt += 4
+    return maf_dict
+
+def parse_fastq_ONT(fastq_file):
+
+    reads = {}
+
+    with open(fastq_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [x.strip() for x in lines]
+
+    l = 0
+    while(l!= len(lines)):
+        # @S_1
+        read_name = lines[l].strip()[1:]
+        l+=1
+        read = lines[l]
+        l+=2
+        # quality_score = lines[l]
+        l+=1
+        reads[read_name] = read
+
+    return reads
 
 def parse_maf_file(maf_file):
     maf_dict = {}
@@ -166,7 +208,7 @@ def write_to_fasta(genome_id, read_sid, read, outdir):
         f.write(read + "\n")
     return
 
-def sample(genomic_region, sample1, sample2, outdir):
+def sample(genomic_region, sample1, sample2, outdir, strategy):
     lineage1 = sample1[1].split("/")[-1]
     lineage2 = sample2[1].split("/")[-1]
     maf_file_1 = os.path.join(sample1[1], sample1[0] + ".maf")
@@ -177,11 +219,19 @@ def sample(genomic_region, sample1, sample2, outdir):
 
     gr_key  = str(genomic_region[0]) + "_" + str(genomic_region[1])
 
-    maf_dict_1 = parse_maf_file(maf_file_1) # genomic region -> simulated read id 
-    maf_dict_2 = parse_maf_file(maf_file_2)
+    if strategy == "ONT": 
+        maf_dict_1 = parse_maf_file_ONT(maf_file_1)
+        maf_dict_2 = parse_maf_file_ONT(maf_file_2)
+    else: 
+        maf_dict_1 = parse_maf_file(maf_file_1) # genomic region -> simulated read id 
+        maf_dict_2 = parse_maf_file(maf_file_2)
 
-    reads_1 = parse_fastq(fastq_file_1) # simulated read id -> read
-    reads_2 = parse_fastq(fastq_file_2)
+    if strategy == "ONT": 
+        reads_1 = parse_fastq_ONT(fastq_file_1) # simulated read id -> read
+        reads_2 = parse_fastq_ONT(fastq_file_2)
+    else: 
+        reads_1 = parse_fastq(fastq_file_1) # simulated read id -> read
+        reads_2 = parse_fastq(fastq_file_2)
 
     # get positive pair
     (read_anchor_sid, read_anchor), (read_pos_sid, read_positive), ed_pos = sample_positive_pair(maf_dict_1, reads_1, gr_key)
@@ -221,6 +271,7 @@ def main():
     parser.add_argument('--n', dest = 'num', required=True, type=int, help="number of samples to produce")
     parser.add_argument('--dir', dest = 'data_dir', required=True, type=str, help="data directory to sample from")
     parser.add_argument('--out', dest = 'out_dir', required=True, type=str, help="output directory to write samples to")
+    parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=True, type=str, help="ONT or pacbio-hifi")    
     args = parser.parse_args()
 
     data_directory = args.data_dir
@@ -291,7 +342,7 @@ def main():
 
         # sample the reads
         try:
-            num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir)
+            num_samples = sample(genomic_region, info_sample[0], info_sample[1], out_dir, args.strategy)
         except KeyError: 
             print("genomic region not found in one of the genomes selected: ", genomic_region, " continuing to next iteration")
             num_samples = 0
