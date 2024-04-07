@@ -12,12 +12,17 @@ def find_identifier_NCBI(file):
 def make_output_file(output):
     if os.path.exists(output):
         os.remove(output)
-        
+    
+    if  os.path.exists("/".join(output.split("/")[:-1])) != True:
+        os.mkdir("/".join(output.split("/")[:-1]))
     # create new file
     open(output, "x").close()  
 
     with open(output, "w") as f:
         f.write("read_id\tgenomic_region\tlabel\n")
+        f.close()
+    
+    return
 
 def parse_maf_file(maf_file):
     maf_dict = {}
@@ -30,7 +35,7 @@ def parse_maf_file(maf_file):
             next_line = lines[cnt+1].strip().split(" ")
             # next line [1] -> >+_OQ551954.1:140_1081:0
             genomic_region = next_line[1].split(":")[1]
-            strand = next_line[1].split(":")[0].split("_")[0][1:]
+            strand = next_line[1].split("_")[0]
             next_line = lines[cnt+2].strip().split(" ")
             sim_read_id = "/".join(next_line[1].split("/")[:-1])
             if genomic_region not in maf_dict.keys():
@@ -72,6 +77,7 @@ def write_read_entry_to_file(read, genomic_region, label, file):
     # open file and write read to file
     with open(file, "a") as tsvfile:
         tsvfile.write(read + "\t" + genomic_region + "\t" + label + "\n")
+    return 
 
 def write_sequence_to_file(full_read_id, sequence, outdir_read_dir):
     # check if file exists
@@ -82,6 +88,7 @@ def write_sequence_to_file(full_read_id, sequence, outdir_read_dir):
         with open(outdir_read_dir + "/" + full_read_id + ".fasta", "w") as f:
             f.write(">" + full_read_id + "\n")
             f.write(sequence + "\n")
+    return
 
 def write_all_reads(reads, maf_info, label, file, outdir_read_dir):
     for genomic_region in maf_info:
@@ -91,10 +98,8 @@ def write_all_reads(reads, maf_info, label, file, outdir_read_dir):
             full_read_id = label + "_" + read_id.split("/")[0] + read_id.split("/")[1]
             if read_id in reads: 
                 sequence = reads[read_id]
-                
                 if strand == "-":
                     sequence = sequence[::-1].translate(str.maketrans("ATGC", "TACG"))
-
                 write_read_entry_to_file(full_read_id, genomic_region, label, file)
                 write_sequence_to_file(full_read_id, sequence, outdir_read_dir)
 

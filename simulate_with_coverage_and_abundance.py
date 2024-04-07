@@ -50,7 +50,7 @@ def main():
 
 
     # open file to write the ids and their abundances
-    out_file = open(args.outdir + "ids_and_abundances.tsv", "w")
+    out_file = open(args.outdir + "_ids_and_abundances.tsv", "w")
     
     for s_id in ids_and_abundances.keys():
         abundance = ids_and_abundances[s_id]

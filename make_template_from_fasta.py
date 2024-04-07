@@ -17,7 +17,6 @@ def parse_R_output(output):
 def get_amplicon_positions(Fprob, Rprob, seq_path):
     # call r script to get amplicon positions
     results = subprocess.run(["Rscript match_primers.R " + Fprob + " " + Rprob + " " + seq_path], shell=True, capture_output=True, text=True)
-    print("Results: ", results.stdout)
     results = parse_R_output(results.stdout)
     start = int(results[0]) + len(Fprob)
     end = int(results[1]) - len(Rprob)
@@ -36,14 +35,12 @@ def get_primer_sequences(primer_file, index):
     return Fprob, Rprob
 
 
-def create_template(seq_path, id, template, primer_file, cnt_templates):
+def create_template(seq_path, s_id, template, primer_file, n_templates):
     template_df = pd.read_csv(template, sep='\t', header=None)
     template_df.columns = ["chr", "start", "end", "name_1", "name_2", "strand"]
     final_template = "" 
-
     # read template file two lines at a time (positive & negative strand info)
     for i in range(0, len(template_df), 2):
-        cnt = 0
         # get positive strand info for reference genome
         pos_strand = template_df.iloc[i]
         # get negative strand info for reference genome
@@ -51,6 +48,7 @@ def create_template(seq_path, id, template, primer_file, cnt_templates):
 
         seq_start = pos_strand["end"]
         seq_end = neg_strand["start"]
+
         try:
             # get primer sequences
             Fprob, Rprob = get_primer_sequences(primer_file, i)
@@ -60,6 +58,24 @@ def create_template(seq_path, id, template, primer_file, cnt_templates):
 
         except:
             print("Something went wrong with the amplicon positions.")
+            print("Will get amplicon with MSAs instead")
+
+            parent_dir = "/".join(seq_path.split("/")[: -2])
+            amplicon = subprocess.run(['python find_amplicons_with_mfft.py --dir {} --start {} --end {} --record_id {}'.format(parent_dir, seq_start, seq_end, s_id)], shell=True, capture_output=True, text=True)
+            print("Amplicon: ", amplicon)
+            amplicon = str(amplicon.stdout).strip()
+            cnt = 0
+            while cnt < int(n_templates/2):
+                # write hald with + strand and half with - strand
+                final_template += ">" + "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+                final_template += amplicon + "\n"
+                cnt += 1
+            leftover_templates = n_templates - int(n_templates/2)
+            cnt2 = 0
+            while cnt2 < leftover_templates:
+                final_template += ">" + "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt+cnt2) + "\n"
+                final_template += str(amplicon[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
+                cnt2 += 1
             continue
 
         # parse the fasta file
@@ -67,11 +83,18 @@ def create_template(seq_path, id, template, primer_file, cnt_templates):
         seq = next(record).seq
         
         amplicon = seq[start:end]
-
-        while cnt < cnt_templates:
-            final_template += ">" + id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
+        cnt = 0
+        while cnt < int(n_templates/2):
+            # write hald with + strand and half with - strand
+            final_template += ">" + "+_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt) + "\n"
             final_template += str(amplicon) + "\n"
             cnt += 1
+        leftover_templates = n_templates - int(n_templates/2)
+        cnt2 = 0
+        while cnt2 < leftover_templates:
+            final_template += ">" + "-_" + s_id + ":" + str(seq_start) + "_" + str(seq_end) + ":" + str(cnt+cnt2) + "\n"
+            final_template += str(str(amplicon)[::-1].translate(str.maketrans("ATGC", "TACG"))) + "\n"
+            cnt2 += 1
 
     return final_template
 
@@ -89,7 +112,7 @@ def main():
     # get directories in data directory
     data_dir = args.dir
 
-    if args.seq_id == None
+    if args.seq_id == None:
         # get all directories in data directory
         dirs = [x[0] for x in os.walk(data_dir)]
         
@@ -116,17 +139,20 @@ def main():
 
                 with open(template_file, "w") as out_file:
                     out_file.write(template)
-        else: 
+    else: 
             
-            seq_path = args.dir + "/" + args.seq_id + ".fasta"
-                template = create_template(seq_path, gisaid_id, args.bed_file, args.primer_file args.cnt_templates)
-            # write template to file
-            template_file = args.dir + "/" + args.seq_id + ".template"
-            # if template file already exists, remove it
-            if os.path.exists(template_file):
-                os.remove(template_file)
-            with open(template_file, "w") as out_file:
-                out_file.write(template)    
+        seq_path = args.dir + "/" + args.seq_id + ".fasta"
+        template = create_template(seq_path, args.seq_id, args.bed_file, args.primer_file, args.cnt_templates)
+        # write template to file
+        template_file = args.dir + "/" + args.seq_id + ".template"
+        # if template file already exists, remove it
+        if os.path.exists(template_file):
+            os.remove(template_file)
+
+        open(template_file, 'x').close()
+
+        with open(template_file, "w") as out_file:
+            out_file.write(template)    
 
 
 

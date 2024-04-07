@@ -11,7 +11,7 @@ def simulate_ONT_HQ_reads(directory, identifier, cores):
     return
 
 def simulate_hifi_reads(directory, identifier, cores):
-    os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_ models/ERRHMM-SEQUEL.model  --template {}/{}.template --pass-num 10 --seed 20 --prefix {}/{}".format(directory, identifier, directory, identifier))
+    os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_models/ERRHMM-SEQUEL.model  --template {}/{}.template --pass-num 10 --seed 20 --prefix {}/{}".format(directory, identifier, directory, identifier))
     os.system("samtools view -bS {}/{}.sam > {}/{}.bam".format(directory, identifier, directory, identifier))
     os.system("ccs {}/{}.bam -j {} {}/{}.fastq".format(directory, identifier, cores, directory, identifier))
     return
@@ -20,7 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description="Simulates pacbio hifi amplicon reads")
     parser.add_argument('--dir', dest = 'dir', required=True, type=str, help="path to data directory")
     parser.add_argument('--cores', dest = 'cores', default=8, required=False, type=int, help="cpu cores for the simulation")
-    parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=True, type=str, help="ONT-HQ or pacbio-hifi")    
+    parser.add_argument('--strategy', dest = 'strategy', default="pacbio-hifi", required=True, type=str, help="ONT or pacbio-hifi")    
     args = parser.parse_args()
 
     cores = args.cores
@@ -46,7 +46,7 @@ def main():
             identifier = file.split(".template")[0]
             if strategy == "pacbio-hifi":
                 simulate_hifi_reads(directory, identifier, cores)
-            if strategy == "ONT-HQ": 
+            if strategy == "ONT": 
                 simulate_ONT_HQ_reads(directory, identifier, cores)
 
 

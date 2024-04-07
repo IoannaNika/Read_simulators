@@ -5,12 +5,15 @@ import os
 import sys
 import argparse
 import subprocess
+from Bio import SeqIO
 
 def main():
     parser = argparse.ArgumentParser(description="process percent identity matrix from clustal omega")
     parser.add_argument('--pim', dest = 'pim', required=True, type=str, help="percentage identity matrix")
+    parser.add_argument('--id_thres', dest = 'id_thres', required=True, type=int, help="percentage identity threshold, used as strictly more")
+    parser.add_argument('--id_upp_thres', dest = 'id_upp_thres', required=False, default = 100, type=int, help="upper percentage identity threshold, used as strictly lower")
+    parser.add_argument('--n_seqs', dest = 'n_seqs', required=True, type=int, help="number of sequences to write to file")
     args = parser.parse_args()
-
     pim = args.pim
 
     # read in the percent identity matrix with format: 
@@ -47,7 +50,7 @@ def main():
     for key in seq_dict:
         count = 0
         for key2 in seq_dict[key]:
-            if seq_dict[key][key2] > 95:
+            if seq_dict[key][key2] > args.id_thres and  seq_dict[key][key2] < args.id_upp_thres:
                 count += 1
         if count > max_count:
             max_count = count
@@ -55,14 +58,31 @@ def main():
     
     print(max_seq, max_count)
 
+    path = "/".join(args.pim.split("/")[:-1])
+
+    # if filtered file exists, remove it
+    if os.path.exists(path + "/sequences_filtered.fasta_{}_{}.fasta".format(args.id_thres,  args.n_seqs)):
+        os.remove(path + "/sequences_filtered.fasta_{}_{}.fasta".format(args.id_thres,  args.n_seqs))
+    
+    # create a new file to write the filtered sequences
+    open(path + "/sequences_filtered_{}_{}.fasta".format(args.id_thres,  args.n_seqs), "x").close()
+
+    nthresh = args.n_seqs
+    n = 0
     # print the entries with which the max_seq has more than 95% identity
     for key in seq_dict[max_seq]:
-        if seq_dict[max_seq][key] > 95:
+        if seq_dict[max_seq][key] >  args.id_thres and  seq_dict[max_seq][key] < args.id_upp_thres:
             print(key, seq_dict[max_seq][key])
-
-    
-
-
+            if n >= nthresh:
+                continue
+            else:
+            # parse fasta file 
+                for record in SeqIO.parse(path + "/sequences.fasta", "fasta"):
+                    if key == record.id:
+                        n += 1
+                        with open(path + "/sequences_filtered_{}_{}.fasta".format(args.id_thres,  args.n_seqs), "a") as f:
+                            f.write(">" + record.id + "\n")
+                            f.write(str(record.seq) + "\n")
 
 if __name__ == "__main__":
     sys.exit(main())

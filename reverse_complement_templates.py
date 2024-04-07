@@ -28,6 +28,9 @@ def modify_template(template_dict):
     for record_info, sequence in template_dict.items():
         # if the sequence is nubmer between 0 and 4 dont reverse complement
         record_info_digit = int(record_info.split(":")[-1])
+        record_info = record_info.replace("+_", "")
+        record_info = record_info.replace("-_", "")
+        record_info = record_info.replace("-", "")
         if record_info_digit <= 4:
             record_info = ">+_" + record_info[1:]
             modified_template_dict[record_info] = sequence

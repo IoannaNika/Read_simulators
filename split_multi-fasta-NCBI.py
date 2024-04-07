@@ -11,8 +11,8 @@ def main():
     parser.add_argument('--dir', dest = 'dir', required=True, type=str, help="path to data directory, containing metadata.txt and sequences.fasta files")
     args = parser.parse_args()
 
-    # metadata
-    metadata = args.dir + "/metadata.txt"
+    # # metadata
+    # metadata = args.dir + "/metadata.txt"
     # sequence path
     seq_path = args.dir + "/sequences.fasta"
 
@@ -21,28 +21,28 @@ def main():
     # 10,807 bp linear RNA 
     # OK571913.1 GI:2128382615
 
-    list_of_identifiers = []
+    # list_of_identifiers = []
 
-    with open(metadata) as f:
-        lines = f.readlines()
+    # with open(metadata) as f:
+    #     lines = f.readlines()
     
-    counter = 0
+    # counter = 0
 
-    while counter < len(lines): 
-        if  lines[counter].split(", ")[-1].strip() == "complete genome":
-            counter+=2
-            identifier = lines[counter].split(" ")[0].strip()
-            list_of_identifiers.append(identifier)
-            counter +=2
-        else: 
-            counter +=4
+    # while counter < len(lines): 
+    #     if  lines[counter].split(", ")[-1].strip() == "complete genome":
+    #         counter+=2
+    #         identifier = lines[counter].split(" ")[0].strip()
+    #         list_of_identifiers.append(identifier)
+    #         counter +=2
+    #     else: 
+    #         counter +=4
 
-    # print list of identifiers in a output.txt file where each identifier is written below each other without comma
-    out_file = "output.txt"
-    # make file 
-    with open(out_file, "w") as out_file:
-        for id in list_of_identifiers:
-            out_file.write(id + "\n")
+    # # print list of identifiers in a output.txt file where each identifier is written below each other without comma
+    # out_file = "output.txt"
+    # # make file 
+    # with open(out_file, "w") as out_file:
+    #     for id in list_of_identifiers:
+    #         out_file.write(id + "\n")
 
 
     # read sequences.fasta file
@@ -60,8 +60,8 @@ def main():
         identifier = strain.split(" ")[0].strip()
 
         
-        if identifier not in list_of_identifiers:
-            continue
+        # if identifier not in list_of_identifiers:
+        #     continue
         
         total_seqs += 1
 
