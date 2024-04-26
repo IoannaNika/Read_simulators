@@ -16,7 +16,7 @@ def create_template_with_pf(directory, s_id, n_reads, bed_file, primer_file):
     return
 
 def simulate_ONT_HQ_reads(directory, identifier, ): 
-    os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_models/ERRHMM-ONT-HQ.model  --template {}/{}.template  --seed 20 --prefix {}/{}".format(directory, identifier, directory, identifier))
+    os.system("pbsim --strategy templ --method errhmm --errhmm data/pbsim3_models/ERRHMM-ONT-HQ.model  --template {}/{}.template --prefix {}/{}".format(directory, identifier, directory, identifier))
     return
 
 def simulate_hifi_reads(directory, identifier, cores):

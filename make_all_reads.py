@@ -3,6 +3,51 @@ import os
 import sys
 import argparse
 
+def parse_maf_file_ONT(maf_file):
+    maf_dict = {}
+    with open(maf_file, "r") as f:
+        lines = f.readlines()
+
+    cnt = 0
+    while cnt < len(lines):
+        if lines[cnt].startswith("a"):
+            next_line = lines[cnt+1].strip().split(" ")
+            genomic_region = next_line[1].split(":")[1]
+            strand = next_line[1][0]
+            next_line = lines[cnt+2].strip().split(" ")
+            sim_read_id = next_line[1].strip()
+            if genomic_region not in maf_dict.keys():
+                maf_dict[genomic_region] = set()
+                maf_dict[genomic_region].add((sim_read_id, strand))
+            else:
+                maf_dict[genomic_region].add((sim_read_id, strand))
+
+            cnt += 4
+    
+    return maf_dict
+
+def parse_fastq_ONT(fastq_file):
+
+    reads = {}
+
+    with open(fastq_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [x.strip() for x in lines]
+
+    l = 0
+    while(l!= len(lines)):
+        # @S_1
+        read_name = lines[l].strip()[1:]
+        l+=1
+        read = lines[l]
+        l+=2
+        # quality_score = lines[l]
+        l+=1
+        reads[read_name] = read
+
+    return reads
+
 
 def find_identifier_NCBI(file):
     # remove the .fasta
@@ -90,12 +135,16 @@ def write_sequence_to_file(full_read_id, sequence, outdir_read_dir):
             f.write(sequence + "\n")
     return
 
-def write_all_reads(reads, maf_info, label, file, outdir_read_dir):
+def write_all_reads(reads, maf_info, label, file, outdir_read_dir, ont):
     for genomic_region in maf_info:
         read_ids_and_strands = maf_info[genomic_region]
+        print(read_ids_and_strands, genomic_region, label)
 
         for (read_id, strand) in read_ids_and_strands:
-            full_read_id = label + "_" + read_id.split("/")[0] + read_id.split("/")[1]
+            if ont == "True": 
+                full_read_id = label + "_" + read_id
+            else: 
+                full_read_id = label + "_" + read_id.split("/")[0] + read_id.split("/")[1]
             if read_id in reads: 
                 sequence = reads[read_id]
                 if strand == "-":
@@ -108,6 +157,8 @@ def main():
     parser = argparse.ArgumentParser(description="List all reads in a directory")
     parser.add_argument('--dir', dest = 'data_dir', required=True, type=str, help="data directory to sample from")
     parser.add_argument('--out', dest = 'out_dir', required=True, type=str, help="output directory to write samples to")
+    parser.add_argument('--ont', dest = 'ont', required=False, default ="False", type=str, help="ONT reads or not")
+
     args = parser.parse_args()
 
     data_dir = args.data_dir
@@ -129,11 +180,17 @@ def main():
     for file in files:
         file_path = data_dir + "/" + file
         identifier = find_identifier_NCBI(file)
-       
-        reads = parse_fastq(file_path)
-        maf_info = parse_maf_file(data_dir + "/" + identifier + ".maf")
+        if args.ont == "True":
+            reads = parse_fastq_ONT(file_path)
+        else:
+            reads = parse_fastq(file_path)
+        
+        if args.ont == "True":
+            maf_info = parse_maf_file_ONT(data_dir + "/" + identifier + ".maf")
+        else: 
+            maf_info = parse_maf_file(data_dir + "/" + identifier + ".maf")
 
-        write_all_reads(reads, maf_info, identifier, out_dir_tsv_file, out_dir + "/reads")
+        write_all_reads(reads, maf_info, identifier, out_dir_tsv_file, out_dir + "/reads", args.ont)
 
 if __name__ == "__main__":
     sys.exit(main())

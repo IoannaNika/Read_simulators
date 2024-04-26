@@ -33,7 +33,6 @@ def per_region_tuples_no_gt(tsv1, outfile, region, reads_path):
     end = region[1]
 
     reads_tsv1 = tsv1[(tsv1["start"] == start) & (tsv1["end"] == end)]
-    print(reads_tsv1)
 
     # sample negative samples
     for i, read1 in reads_tsv1.iterrows():
@@ -115,7 +114,7 @@ def make_region_tuples_positives(tsv, outfile, region, reads_path, tsv_file_pref
                 read1_next["read"] = read1_next["read"][::-1].translate(str.maketrans("ACGT", "TGCA"))
           
             ed = editdistance.eval(read1["read"], read1_next["read"])
-
+            
             with open(outfile, "a") as f:
                 f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", tsv_file_prefix + "_" + read1["id"].replace("/", "_"), tsv_file_prefix + "_" + read1_next["id"].replace("/", "_"), start, end, ed))
                 f.close()
@@ -152,7 +151,6 @@ def make_all_tuples_no_gt(tsv1, outfile, genomic_regions):
 
     processes = [Process(target=per_region_tuples_no_gt, args=(tsv1, outfile, region, reads_path)) for region in genomic_regions]
 
-    
     for process in processes:
         process.start()
     for process in processes:
@@ -214,7 +212,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
     open(outfile, 'x').close()
     # write header for the tsv file
     with open(outfile, "a") as f:
-        if singles == False: 
+        if singles == "False": 
             f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
         else: 
             f.write("id\tread\tgenomic_regions\tfile\n")
@@ -259,7 +257,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
 
         # write to tsv file
         with open(outfile, "a") as f:
-            if singles == False:
+            if singles == "False":
                 f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos))
             else: 
                 f.write("{}\t{}\t{}\t{}\n".format(read_anchor["id"], read_anchor["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), indx))
@@ -290,7 +288,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
         # write to tsv file
         if ed_neg <= ed_pos:
             with open(outfile, "a") as f:
-                if singles == False:
+                if singles == "False":
                     f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("hard negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
                 else: 
                     f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" +  str(read_anchor["end"]), 1-indx))
@@ -298,7 +296,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
             count += 1
         else:
             with open(outfile, "a") as f:
-                if singles == False:
+                if singles == "False":
                     f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
                 else:
                     f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), 1-indx))
@@ -313,9 +311,9 @@ def main():
     parser.add_argument('--tsv1', dest = 'tsv1', required=True, type=str, help="tsv file with reads from the first dataset")
     parser.add_argument('--tsv2', dest = 'tsv2', required=False, default=None, type=str, help="tsv file with reads from the second dataset")
     parser.add_argument("--n", dest="n", required=False, default=1000, type=int, help="number of tuples to create")
-    parser.add_argument("--all", dest="all", required=False, default=False, type=bool, help="True, if all tuples should be created, False, is only the specified number of tuples should be created, when one tsv file is provided, pairs within the same tsv file will be created")
-    parser.add_argument('--singles', dest = 'singles', required=False, default=False, type=bool, help="True, if only singles should be created, False, if tuples should be created")
-    parser.add_argument('--with_prefix', dest ='with_prefix', required=False, default=False, type=bool, help="include file prefix in read ids e.g. Wuhan/tsv_file_1.tsv, Wuhan will be used as prefix for the read ids to differentiate their origin, implemented only for the --all option")
+    parser.add_argument("--all", dest="all", required="False", default="False", type=str, help="True, if all tuples should be created, False, is only the specified number of tuples should be created, when one tsv file is provided, pairs within the same tsv file will be created")
+    parser.add_argument('--singles', dest = 'singles', required=False, default="False", type=str, help="True, if only singles should be created, False, if tuples should be created")
+    parser.add_argument('--with_prefix', dest ='with_prefix', required=False, default="False", type=str, help="include file prefix in read ids e.g. Wuhan/tsv_file_1.tsv, Wuhan will be used as prefix for the read ids to differentiate their origin, implemented only for the --all option")
     args = parser.parse_args()
     
     tsv1_file = args.tsv1
@@ -323,7 +321,7 @@ def main():
     tsv1_file_prefix = ""
     tsv2_file_prefix = ""
 
-    if args.with_prefix and tsv2_file != None: 
+    if args.with_prefix == "True" and tsv2_file != None: 
         tsv1_file_prefix = tsv1_file.split("/")[-2]
         tsv2_file_prefix = tsv2_file.split("/")[-2]
 
@@ -351,13 +349,13 @@ def main():
     # genomic_regions = [(13055,13960), (13803, 14718), (14600, 15599), (15371, 16311)]
 
     
-    if tsv2_file == None and args.all == True: 
+    if tsv2_file == None and args.all == "True": 
         make_all_tuples_no_gt(tsv1, outfile, genomic_regions)
 
-    if args.all == False and tsv2_file != None:
+    if args.all == "False" and tsv2_file != None:
         make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions)
 
-    if tsv2_file != None and args.all == True:
+    if tsv2_file != None and args.all == "True":
         make_all_tuples(tsv1, tsv2, outfile, genomic_regions, tsv1_file_prefix, tsv2_file_prefix)
 
 
