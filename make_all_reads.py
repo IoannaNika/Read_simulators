@@ -92,6 +92,7 @@ def parse_maf_file(maf_file):
             cnt += 4
     return maf_dict
 
+
 def parse_fastq(fastq_file):
 
     reads = {}
