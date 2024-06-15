@@ -156,11 +156,59 @@ def apply_mutation(sequence, number):
     
     return sequence
 
+def apply_all(sequence, number):
+    options = ["A", "C", "G", "T"]
+    used_positions = []
+
+    for i in range(number):
+        # randomly select a position in the sequence
+        position_del = random.randint(0, len(sequence))
+        position_ins = random.randint(0, len(sequence))
+
+        # make sure the position is not already used
+        while position_del in used_positions:
+            position_del = random.randint(0, len(sequence))
+
+        used_positions.append(position_del)
+        
+        while position_ins in used_positions:
+            position_ins = random.randint(0, len(sequence))
+
+        
+        # add the position to the used positions
+        used_positions.append(position_ins)
+       
+
+        # perform the operations
+        # delete the base at the position
+        sequence = sequence[:position_del] + sequence[position_del+1:]
+        # insert a base at the position
+        base = random.choice(options)
+        sequence = sequence[:position_ins] + base + sequence[position_ins:]
+        # mutate the base at the position
+        
+        position_mut = random.randint(0, len(sequence)-1)
+
+        while position_mut in used_positions:
+            position_mut = random.randint(0, len(sequence)-1)
+        used_positions.append(position_mut)
+
+        base = sequence[position_mut]
+        
+        while True:
+            new_base = random.choice(options)
+            if new_base != base:
+                break
+        
+        sequence = sequence[:position_mut] + new_base + sequence[position_mut+1:]
+
+    return sequence
+
 
 def main():
     parser = argparse.ArgumentParser(description="Creates amplicon fragments, with the specified number of operations")
     parser.add_argument('--input_amplicon', dest = 'input_amplicon', required=True, type=str, help="path to input amplicon, fasta format")
-    parser.add_argument('--operation', dest = 'operation', required=True, type=str, help="operation to perform on amplicon, either 'insertion', deletion or 'mutation'")
+    parser.add_argument('--operation', dest = 'operation', required=True, type=str, help="operation to perform on amplicon, either 'insertion', deletion or 'mutation or all'")
     parser.add_argument('--number', dest = 'number', required=True,  type=int, help="number of insertions, deletions or mutations to perform")
     parser.add_argument('--output_file', dest = 'output_file', required=True, type=str, help="path to output file, fasta format")
     parser.add_argument('--coverage', dest = 'coverage', required=False, default=100, type=int, help="coverage  for the dataset")
@@ -203,6 +251,9 @@ def main():
         elif args.operation == "mutation":
             
             modified_sequence = apply_mutation(template_sequence, args.number)
+        elif args.operation == "all": 
+            
+            modified_sequence = apply_all(template_sequence, args.number)
         else:
             print("Invalid operation, must be either 'insertion', 'deletion' or 'mutation'")
             return 1
