@@ -8,7 +8,7 @@ def load_read(fasta_file):
 
     record = SeqIO.read(fasta_file, "fasta")
 
-    return record.seq
+    return str(record.seq)
 
 def write_to_temp_file(sequence1, sequence2):
     with open("temp.fasta", "w") as f:
@@ -66,8 +66,8 @@ def main():
         label = row["label"]
         
 
-        read1 = load_read(args.dir + "/" + read_1 + ".fasta")
-        read2 = load_read(args.dir + "/" + read_2 + ".fasta")
+        read1 = load_read(args.dir + "/reads/" + read_1 + ".fasta")
+        read2 = load_read(args.dir + "/reads/" + read_2 + ".fasta")
 
         mutation_n = calc_n_mutations(read1, read2)
         
