@@ -57,14 +57,14 @@ def main():
 
     samples = pd.read_csv(args.dir + "/samples.tsv", sep="\t")
     out_file = open(args.dir + "/samples_mutations.tsv", "w")
-    out_file.write("read_1\tread_2\tlabel\tmutations\n")
+    out_file.write("read_1\tread_2\tlabel\tmutations\tgenomic_region\n")
     out_file.close()
-
+    
     for index, row in samples.iterrows():
         read_1 = row["read_1"] 
         read_2 = row["read_2"]
         label = row["label"]
-        
+        gr = row["genomic_region"]
 
         read1 = load_read(args.dir + "/reads/" + read_1 + ".fasta")
         read2 = load_read(args.dir + "/reads/" + read_2 + ".fasta")
@@ -72,9 +72,8 @@ def main():
         mutation_n = calc_n_mutations(read1, read2)
         
         out_file = open(args.dir + "/samples_mutations.tsv", "a")
-        out_file.write(read_1 + "\t" + read_2 + "\t" + label + "\t" + str(mutation_n) + "\n")
+        out_file.write(read_1 + "\t" + read_2 + "\t" + label + "\t" + str(mutation_n) + "\t" + gr + "\n")
         out_file.close()
-
 
 if __name__ == "__main__":
     sys.exit(main())
