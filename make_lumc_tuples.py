@@ -4,10 +4,52 @@ import pandas as pd
 import editdistance
 import numpy as np
 from multiprocessing import Process
+from Bio import SeqIO
 
 def rev_complement(read): 
     return  read[::-1].translate(str.maketrans("ACGT", "TGCA"))
 
+def check_combination(row, id1_val, id2_val):
+    return ((row['id1'] == id1_val and row['id2'] == id2_val) or
+            (row['id1'] == id2_val and row['id2'] == id1_val))
+
+def calc_n_mutations(read1, read2):
+
+    write_to_temp_file(read1, read2)
+
+    # align
+    mafft_msa()
+
+    # load aligned sequences expected two sequences
+    aligned_sequences = SeqIO.parse("mafft_temp.fasta", "fasta")
+
+    seq1 = next(aligned_sequences).seq
+    seq2 = next(aligned_sequences).seq
+
+    n_mutations = 0
+
+    for i in range(len(seq1)):
+        if (seq1[i] != seq2[i]) and (seq1[i] != "-") and (seq2[i] != "-"):
+            n_mutations += 1
+    
+    clean_up()
+
+    return n_mutations
+
+def write_to_temp_file(sequence1, sequence2):
+    with open("temp.fasta", "w") as f:
+        f.write(">sequence1\n")
+        f.write(sequence1 + "\n")
+        f.write(">sequence2\n")
+        f.write(sequence2 + "\n")
+
+def mafft_msa():
+    os.system("mafft --auto --quiet --thread 4 temp.fasta > mafft_temp.fasta")
+    return 
+
+def clean_up():
+    os.system("rm temp.fasta")
+    os.system("rm mafft_temp.fasta")
 
 def write_fasta_read(reads_path, tsv_file_prefix, read_row):
     if tsv_file_prefix != "":
@@ -213,7 +255,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
     # write header for the tsv file
     with open(outfile, "a") as f:
         if singles == "False": 
-            f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\n")
+            f.write("label\tid1\tread1\tid2\tread2\tstart\tend\tedit_distance\tn_mutations\n")
         else: 
             f.write("id\tread\tgenomic_regions\tfile\n")
 
@@ -230,8 +272,6 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
         # sample uniformly a tsv file
         indx = np.random.randint(len(tsvs))
         tsv = tsvs[indx]
-        # sample uniformly a strand
-        # s = strand[np.random.randint(len(strand))]
 
         # find reads that span the region
         reads = tsv[(tsv["start"] == start) & (tsv["end"] == end)]  #& (tsv["strand"] == s))]
@@ -254,14 +294,26 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
             read_pos["read"] = rev_complement(read_pos["read"])
             
         ed_pos = editdistance.eval(read_anchor["read"], read_pos["read"])
-
-        # write to tsv file
-        with open(outfile, "a") as f:
-            if singles == "False":
-                f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos))
-            else: 
-                f.write("{}\t{}\t{}\t{}\n".format(read_anchor["id"], read_anchor["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), indx))
-        count += 1
+        ed_pos_mutation = calc_n_mutations(read_anchor["read"], read_pos["read"])
+        
+        skip_pos = False
+        # if read pair exists in the tsv output file, if so then continue
+        if singles == "False":
+            if tsv1.shape[0] > 0 and tsv2.shape[0] > 0:
+                outfile_contents = pd.read_csv(outfile, sep="\t", header=0)
+                exists = outfile_contents.apply(lambda row: check_combination(row, read_anchor['id'], read_pos['id']), axis=1).any()
+                if exists: 
+                    skip_pos = True
+                
+        
+        if skip_pos == False:           
+            # write to tsv file
+            with open(outfile, "a") as f:
+                if singles == "False":
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("positive", read_anchor["id"], read_anchor["read"], read_pos["id"], read_pos["read"], read_anchor["start"], read_anchor["end"], ed_pos, ed_pos_mutation))
+                else: 
+                    f.write("{}\t{}\t{}\t{}\n".format(read_anchor["id"], read_anchor["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), indx))
+            count += 1
 
         # sample a negative sample for the anchor
         if indx == 0:
@@ -281,15 +333,27 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
         read_neg_strand = read_neg["strand"]
         if read_neg_strand == "-": 
             read_neg["read"] = rev_complement(read_neg["read"])
+        
         ed_neg = editdistance.eval(read_anchor["read"], read_neg["read"])
-
+        ed_neg_mutations = calc_n_mutations(read_anchor["read"], read_neg["read"])
+        
         if ed_neg < 1:
             continue
+        
+        # if read pair exists in the tsv output file, if so then continue
+        if singles == "False":
+            if tsv1.shape[0] > 0 and tsv2.shape[0] > 0:
+
+                outfile_contents = pd.read_csv(outfile, sep="\t", header=0)
+                exists = outfile_contents.apply(lambda row: check_combination(row, read_anchor['id'], read_neg['id']), axis=1).any()
+                if exists:
+                    continue
+
         # write to tsv file
         if ed_neg <= ed_pos:
             with open(outfile, "a") as f:
                 if singles == "False":
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("hard negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("hard negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg, ed_neg_mutations))
                 else: 
                     f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" +  str(read_anchor["end"]), 1-indx))
 
@@ -297,7 +361,7 @@ def make_tuples(tsv1, tsv2, n, outfile, singles, genomic_regions):
         else:
             with open(outfile, "a") as f:
                 if singles == "False":
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg))
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format("negative", read_anchor["id"], read_anchor["read"],read_neg["id"], read_neg["read"], read_anchor["start"], read_anchor["end"], ed_neg, ed_neg_mutations))
                 else:
                     f.write("{}\t{}\t{}\t{}\n".format(read_neg["id"], read_neg["read"], str(read_anchor["start"]) + "_" + str(read_anchor["end"]), 1-indx))
 
