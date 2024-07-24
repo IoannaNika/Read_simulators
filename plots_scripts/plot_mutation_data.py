@@ -61,8 +61,8 @@ for m in mutations["start"].unique():
     # get the mutations in the region
     region = mutations[mutations["start"] == m]
 
-    pos_mutations_in_region = list(region[region["label"] == "positive"]["edit_distance"])
-    neg_mutations_in_region = list(region[region["label"] != "positive"]["edit_distance"])
+    pos_mutations_in_region = list(region[region["label"] == "positive"]["n_mutations"])
+    neg_mutations_in_region = list(region[region["label"] != "positive"]["n_mutations"])
     res[m] = {"positive": pos_mutations_in_region, "negative": neg_mutations_in_region}
 
 
@@ -86,6 +86,7 @@ fig.legend(handles=[pos_patch, neg_patch], labels=['Positive', 'Negative'],
            ncol=2, loc='upper center', bbox_to_anchor=(0.5, 0.95))
 
 ax.set_xticks(range(0, len(sorted_regions)*2, 2))
-ax.set_xticklabels(sorted_regions, rotation=90)
+updated = [x for x in sorted_xtick_regions if int(x.split("-")[0]) in sorted_regions]
+ax.set_xticklabels(updated, rotation=90)
 
 plt.savefig("plots_scripts/mutation_distribution_lumc_tuples.pdf", format="pdf", bbox_inches="tight", dpi=300)
