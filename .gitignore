@@ -13,3 +13,11 @@ Experiments_data_planned/*
 *.depth
 */__pycache__/*
 *.vscode/*
+Error_corrected_data/*
+canu-2.2/*
+hifiasm/*
+*.log
+trim.h5
+trimmed_03_50.h5
+minimap2-2.28_x64-linux/*
+canu-2.2.Linux.tar.xz

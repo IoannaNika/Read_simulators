@@ -1,0 +1,1 @@
+hifiasm/hifiasm --write-ec -o Error_corrected_data/hifiasm/lumc/03_50/assembly.asm data/lumc_data/natural_mixtures/03_50/trimmed_03_50.fastq
